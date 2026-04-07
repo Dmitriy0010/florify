@@ -1,0 +1,49 @@
+[versions]
+java            = "23"
+springBoot      = "4.0.5"
+springDm        = "1.1.7"
+flyway          = "11.3.4"
+kafka           = "3.9.0"
+testcontainers  = "1.20.2"
+springDoc       = "2.8.5"
+jjwt            = "0.12.6"
+lombok          = "1.18.36"
+minio           = "8.5.12"
+
+[libraries]
+# Spring
+spring-boot-starter            = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-web        = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-data-jpa   = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-security   = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-actuator   = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-kafka                   = { module = "org.springframework.kafka:spring-kafka", version.ref = "kafka" }
+springdoc-openapi              = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springDoc" }
+
+# Database — versions managed by Spring Boot BOM
+postgresql                     = { module = "org.postgresql:postgresql" }
+flyway-core                    = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-postgresql              = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+
+# JWT
+jjwt-api                       = { module = "io.jsonwebtoken:jjwt-api",     version.ref = "jjwt" }
+jjwt-impl                      = { module = "io.jsonwebtoken:jjwt-impl",    version.ref = "jjwt" }
+jjwt-jackson                   = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+# Media
+minio                          = { module = "io.minio:minio", version.ref = "minio" }
+
+# Utilities
+lombok                         = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+
+# Testing
+spring-boot-starter-test       = { module = "org.springframework.boot:spring-boot-starter-test" }
+testcontainers-bom             = { module = "org.testcontainers:testcontainers-bom",  version.ref = "testcontainers" }
+testcontainers-postgres        = { module = "org.testcontainers:postgresql" }
+testcontainers-kafka           = { module = "org.testcontainers:kafka" }
+
+[plugins]
+spring-boot              = { id = "org.springframework.boot",          version.ref = "springBoot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDm" }
