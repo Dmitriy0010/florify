@@ -31,7 +31,7 @@ WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 
 # Final application JAR will be located here after build
-COPY --from=builder /workspace/build/libs/*.jar /app/app.jar
+COPY --from=builder /workspace/*/build/libs/*-SNAPSHOT.jar /app/app.jar
 
 RUN chown -R spring:spring /app
 

@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:florify_db}
+    username: ${DB_USER:florify_user}
+    password: ${DB_PASSWORD:florify_password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+    schemas: auth
+    default-schema: auth
+  threads:
+    virtual:
+      enabled: true
+
+jwt:
+  secret: ${JWT_SECRET:very-long-secret-key-that-is-at-least-thirty-two-characters-long}
+  issuer: florify-auth
+  access-token-ttl-minutes: 15
+
+logging:
+  level:
+    ru.florify: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

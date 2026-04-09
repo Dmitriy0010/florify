@@ -9,6 +9,8 @@ springDoc       = "2.8.5"
 jjwt            = "0.12.6"
 lombok          = "1.18.36"
 minio           = "8.5.12"
+mapstruct       = "1.6.3"
+lombokMapstructBinding = "0.2.0"
 
 [libraries]
 # Spring
@@ -37,6 +39,9 @@ minio                          = { module = "io.minio:minio", version.ref = "min
 
 # Utilities
 lombok                         = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+lombok-mapstruct-binding       = { module = "org.projectlombok:lombok-mapstruct-binding", version.ref = "lombokMapstructBinding" }
+mapstruct                      = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor            = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
 
 # Testing
 spring-boot-starter-test       = { module = "org.springframework.boot:spring-boot-starter-test" }
