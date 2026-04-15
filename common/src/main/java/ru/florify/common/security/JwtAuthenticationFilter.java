@@ -36,9 +36,11 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProperties jwtProperties;
+    private final TokenBlacklist tokenBlacklist;
 
-    public JwtAuthenticationFilter(JwtProperties jwtProperties) {
+    public JwtAuthenticationFilter(JwtProperties jwtProperties, TokenBlacklist tokenBlacklist) {
         this.jwtProperties = jwtProperties;
+        this.tokenBlacklist = tokenBlacklist;
     }
 
     @Override
@@ -48,13 +50,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            UserPrincipal principal = parseToken(token);
+            String token = authHeader.substring(7).trim();
+            
+            if (token.isEmpty()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            
+            if (tokenBlacklist != null && tokenBlacklist.isBlacklisted(token)) {
+                log.debug("Token is blacklisted: {}", token);
+            } else {
+                UserPrincipal principal = parseToken(token);
 
-            if (principal != null) {
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        principal, token, principal.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (principal != null) {
+                    var authentication = new UsernamePasswordAuthenticationToken(
+                            principal, token, principal.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         }
 

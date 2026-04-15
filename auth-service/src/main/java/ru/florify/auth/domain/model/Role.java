@@ -9,7 +9,7 @@ package ru.florify.auth.domain.model;
  * CASHIER          — POS terminal operator
  * COURIER          — delivery staff, sees only own assigned orders
  * SUPPLIER_MANAGER — manages suppliers and purchase invoices
- * CLIENT           — registered B2C customer (optional account)
+ * CUSTOMER         — registered B2C customer (optional account)
  */
 public enum Role {
     OWNER,
@@ -18,5 +18,5 @@ public enum Role {
     CASHIER,
     COURIER,
     SUPPLIER_MANAGER,
-    CLIENT
+    CUSTOMER
 }

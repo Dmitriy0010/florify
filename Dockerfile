@@ -1,42 +1,25 @@
-FROM amazoncorretto:23-alpine AS builder
-
-WORKDIR /workspace
-
-# Copying common gradle files
-COPY gradlew gradlew
-COPY gradlew.bat gradlew.bat
-COPY settings.gradle.kts settings.gradle.kts
-COPY build.gradle.kts build.gradle.kts
-COPY gradle gradle
-
-RUN chmod +x gradlew
-# Download dependencies for faster rebuilds
-RUN ./gradlew --no-daemon dependencies || true
-
-# Copy source code (later we will add modules)
-COPY . .
-
-# Root build (since it is modular monolith)
-RUN chmod +x gradlew
-RUN ./gradlew --no-daemon bootJar
-
-FROM amazoncorretto:23-alpine AS runtime
-
-ENV TZ=UTC \
-    LANG=C.UTF-8 \
-    JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -Dspring.threads.virtual.enabled=true"
+FROM eclipse-temurin:21-jdk-alpine AS builder
 
 WORKDIR /app
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle.kts settings.gradle.kts gradle.properties ./
+COPY gradle/libs.versions.toml gradle/
 
-RUN addgroup -S spring && adduser -S spring -G spring
+# Copy all source directories
+COPY common common
+COPY auth-service auth-service
+COPY customer-service customer-service
+COPY inventory-service inventory-service
+COPY order-service order-service
+COPY product-catalog-service product-catalog-service
+COPY florify-app florify-app
 
-# Final application JAR will be located here after build
-COPY --from=builder /workspace/*/build/libs/*-SNAPSHOT.jar /app/app.jar
+# Build the modular monolith app
+RUN ./gradlew :florify-app:bootJar --no-daemon
 
-RUN chown -R spring:spring /app
-
-USER spring
-
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/florify-app/build/libs/florify-app.jar app.jar
 EXPOSE 8080
-
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

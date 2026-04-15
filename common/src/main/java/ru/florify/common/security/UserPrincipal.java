@@ -30,6 +30,10 @@ public final class UserPrincipal implements UserDetails {
         return userId;
     }
 
+    public Set<String> getRoles() {
+        return roles;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()

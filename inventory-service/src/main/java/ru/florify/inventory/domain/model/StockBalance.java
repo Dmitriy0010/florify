@@ -1,6 +1,11 @@
 package ru.florify.inventory.domain.model;
 
-import ru.florify.inventory.domain.exception.InsufficientStockException;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.EqualsAndHashCode;
+import lombok.With;
+import ru.florify.common.exception.InsufficientStockException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -9,29 +14,21 @@ import java.util.UUID;
 /**
  * Aggregate root for Stock Balance and WAC calculation.
  */
+@Getter
+@Builder
+@With
+@AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class StockBalance {
+    @EqualsAndHashCode.Include
     private final UUID id;
     private final UUID productId;
     private final BigDecimal quantityInStock;
     private final BigDecimal averageCost;
     private final Integer version;
 
-    public StockBalance(UUID id, UUID productId, BigDecimal quantityInStock, BigDecimal averageCost, Integer version) {
-        this.id = id;
-        this.productId = productId;
-        this.quantityInStock = quantityInStock;
-        this.averageCost = averageCost;
-        this.version = version;
-    }
-
-    public UUID getId() { return id; }
-    public UUID getProductId() { return productId; }
-    public BigDecimal getQuantityInStock() { return quantityInStock; }
-    public BigDecimal getAverageCost() { return averageCost; }
-    public Integer getVersion() { return version; }
-
     public static StockBalance createEmpty(UUID productId) {
-        return new StockBalance(UUID.randomUUID(), productId, BigDecimal.ZERO, BigDecimal.ZERO, 0);
+        return new StockBalance(UUID.randomUUID(), productId, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     /**

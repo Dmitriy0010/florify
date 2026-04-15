@@ -9,5 +9,11 @@ public record LoginRequest(
         String email,
 
         @NotBlank(message = "Password is required")
-        String password
-) {}
+        String password,
+
+        String deviceInfo
+) {
+    public LoginRequest {
+        if (deviceInfo == null) deviceInfo = "unknown";
+    }
+}

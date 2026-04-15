@@ -1,8 +1,6 @@
 package ru.florify.auth.domain.model;
 
-import lombok.Builder;
-import lombok.Value;
-import lombok.With;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -13,24 +11,28 @@ import java.util.UUID;
  * The raw token string is NEVER stored here — only its SHA-256 hash.
  * Use {@link #create} to instantiate and {@link #revoke} to invalidate.
  */
-@Value
+@Getter
 @Builder
+@With
+@AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class RefreshToken {
 
-    UUID    id;
-    UUID    userId;
+    @EqualsAndHashCode.Include
+    private final UUID    id;
+    private final UUID    userId;
 
     /** SHA-256 hash of the raw token string. Never store plaintext. */
-    String  tokenHash;
+    private final String  tokenHash;
 
     /** Browser / device identifier supplied by the client (nullable). */
-    String  deviceInfo;
+    private final String  deviceInfo;
 
-    Instant expiresAt;
-    Instant createdAt;
+    private final Instant expiresAt;
+    private final Instant createdAt;
 
     @With
-    boolean revoked;
+    private final boolean revoked;
 
     // ─────────────────────────────── factory ────────────────────────────────
 
@@ -42,8 +44,7 @@ public class RefreshToken {
      * @param ttlDays    how many days the token stays valid
      * @param deviceInfo optional client device description
      */
-    public static RefreshToken create(UUID userId, String tokenHash, long ttlDays, String deviceInfo) {
-        Instant now = Instant.now();
+    public static RefreshToken create(UUID userId, String tokenHash, long ttlDays, String deviceInfo, Instant now) {
         return RefreshToken.builder()
                 .id(UUID.randomUUID())
                 .userId(userId)
@@ -58,13 +59,13 @@ public class RefreshToken {
     // ───────────────────────────── behaviour ────────────────────────────────
 
     /** @return true when the token's expiry instant is in the past */
-    public boolean isExpired() {
-        return Instant.now().isAfter(expiresAt);
+    public boolean isExpired(Instant now) {
+        return now.isAfter(expiresAt);
     }
 
     /** @return true only when the token has not been revoked AND has not expired */
-    public boolean isValid() {
-        return !revoked && !isExpired();
+    public boolean isValid(Instant now) {
+        return !revoked && !isExpired(now);
     }
 
     /**

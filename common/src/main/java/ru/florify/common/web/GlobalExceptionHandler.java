@@ -2,12 +2,14 @@ package ru.florify.common.web;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.florify.common.exception.*;
+import ru.florify.common.web.ErrorResponse;
 
 import java.util.stream.Collectors;
 
@@ -31,6 +33,16 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(ex.getErrorCode(), ex.getMessage());
     }
 
+    @ExceptionHandler({
+            org.springframework.dao.OptimisticLockingFailureException.class,
+            org.springframework.orm.ObjectOptimisticLockingFailureException.class
+    })
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleOptimisticLocking(Exception ex) {
+        log.warn("Optimistic locking failure: {}", ex.getMessage());
+        return ErrorResponse.of("CONCURRENT_UPDATE", "The record was updated by another process. Please retry.");
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ErrorResponse handleUnauthorized(UnauthorizedException ex) {
@@ -41,6 +53,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleForbidden(ForbiddenException ex) {
         return ErrorResponse.of(ex.getErrorCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        return ErrorResponse.of("FORBIDDEN", "Access denied: insufficient permissions");
     }
 
     /**
@@ -57,6 +75,13 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleDomain(DomainException ex) {
         return ErrorResponse.of(ex.getErrorCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientStock(InsufficientStockException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ErrorResponse.of("INSUFFICIENT_STOCK", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

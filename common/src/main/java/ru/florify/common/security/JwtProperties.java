@@ -1,6 +1,7 @@
 package ru.florify.common.security;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +14,8 @@ import org.springframework.stereotype.Component;
  *   access-token-ttl-minutes: 1440
  * </pre>
  */
-@Data
+@Getter
+@Setter
 @Component
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
@@ -26,4 +28,7 @@ public class JwtProperties {
 
     /** Access token time-to-live in minutes (default: 24 hours). */
     private long accessTokenTtlMinutes = 1440;
+
+    /** Refresh token time-to-live in days (default: 30 days). */
+    private int refreshTokenTtlDays = 30;
 }

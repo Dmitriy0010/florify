@@ -5,5 +5,6 @@ package ru.florify.auth.application.command;
  */
 public record LoginUserCommand(
         String email,
-        String password
+        String password,
+        String deviceInfo
 ) {}

@@ -2,6 +2,7 @@ package ru.florify.auth.adapter.in.web.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record RegisterRequest(
@@ -11,5 +12,16 @@ public record RegisterRequest(
 
         @NotBlank(message = "Password is required")
         @Size(min = 8, message = "Password must be at least 8 characters long")
-        String password
-) {}
+        String password,
+
+        @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone must be a valid format (+79991234567)")
+        String phone,
+
+        String firstName,
+        String lastName,
+        String deviceInfo
+) {
+    public RegisterRequest {
+        if (deviceInfo == null) deviceInfo = "unknown";
+    }
+}
