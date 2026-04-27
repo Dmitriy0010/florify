@@ -46,7 +46,7 @@ public class ConfirmPaymentInteractor implements ConfirmPaymentUseCase {
     public void executeByOrderId(UUID orderId) {
         log.info("Simulating payment confirmation for order: {}", orderId);
         
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
         
         if (order.isPaid()) {
@@ -83,7 +83,7 @@ public class ConfirmPaymentInteractor implements ConfirmPaymentUseCase {
         paymentRepository.save(succeededPayment);
 
         // Update Order
-        Order order = orderRepository.findById(payment.getOrderId())
+        Order order = orderRepository.findByIdWithItems(payment.getOrderId())
                 .orElseThrow(() -> new OrderNotFoundException(payment.getOrderId()));
         
         Order updatedOrder = order.associatePayment(payment, now)

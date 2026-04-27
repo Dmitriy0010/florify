@@ -30,7 +30,7 @@ public class InitiatePaymentInteractor implements InitiatePaymentUseCase {
     public Payment execute(UUID orderId) {
         log.info("Initiating payment for order {}", orderId);
         
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         // Create transaction through gateway (external call)

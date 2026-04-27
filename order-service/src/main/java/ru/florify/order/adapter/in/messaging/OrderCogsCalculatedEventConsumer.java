@@ -26,7 +26,7 @@ public class OrderCogsCalculatedEventConsumer {
     public void onCogsCalculated(OrderCogsCalculatedSpringEvent event) {
         log.info("Received OrderCogsCalculatedSpringEvent for order {}: {}", event.orderId(), event.totalCogs());
 
-        orderRepository.findById(event.orderId()).ifPresentOrElse(order -> {
+        orderRepository.findByIdWithItems(event.orderId()).ifPresentOrElse(order -> {
             // В реальном приложении здесь можно использовать отдельный use case
             // Но для обновления тех. поля в monolith допустимо напрямую через репозиторий
             Order updatedOrder = order.toBuilder()
