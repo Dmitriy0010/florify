@@ -40,8 +40,8 @@ public class OrderController {
     private final OrderWebMapper mapper;
 
     @PostMapping
-    @Operation(summary = "Create a new order", description = "Placing a new order. Customers (owners) and staff only.")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'CASHIER', 'ADMIN', 'OWNER')")
+    @Operation(summary = "Create a new order", description = "Placing a new order. Open to guests and registered users.")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'CASHIER', 'ADMIN', 'OWNER') or isAnonymous()")
     public ResponseEntity<OrderResponse> createOrder(
             @Valid @RequestBody CreateOrderRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
@@ -50,7 +50,16 @@ public class OrderController {
         String effectiveIdempotencyKey = (idempotencyKey != null && !idempotencyKey.isBlank()) 
                 ? idempotencyKey 
                 : UUID.randomUUID().toString();
-        CreateOrderCommand command = mapper.toCommand(request, principal.getUserId(), effectiveIdempotencyKey);
+        
+        UUID callerId = (principal != null) ? principal.getUserId() : null;
+        
+        // If staff provides customerId in request, use it. 
+        // Otherwise, use the callerId (which is the customer themselves for online orders).
+        UUID finalCustomerId = (request.customerId() != null && principal != null && !principal.getRoles().contains("ROLE_CUSTOMER"))
+                ? request.customerId()
+                : callerId;
+
+        CreateOrderCommand command = mapper.toCommand(request, finalCustomerId, effectiveIdempotencyKey);
         Order order = createOrderUseCase.execute(command);
         OrderResponse response = mapper.toResponse(order);
         
@@ -58,16 +67,19 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "Get matching orders", description = "Fetches a list of orders. Staff only. Can filter by customerId.")
-    @PreAuthorize("hasAnyRole('CASHIER', 'ADMIN', 'OWNER')")
+    @Operation(summary = "Get matching orders", description = "Fetches a list of orders. Staff only. Can filter by customerId or floristId (performer).")
+    @PreAuthorize("hasAnyRole('CASHIER', 'ADMIN', 'OWNER', 'FLORIST')")
     public ResponseEntity<List<OrderResponse>> getOrders(
-            @RequestParam(required = false) UUID customerId
+            @RequestParam(required = false) UUID customerId,
+            @RequestParam(required = false) UUID floristId
     ) {
         List<Order> orders;
         if (customerId != null) {
             orders = getOrdersByCustomerUseCase.execute(customerId);
+        } else if (floristId != null) {
+            // New filter for employee activity
+            orders = getOrdersByCustomerUseCase.executeByFlorist(floristId);
         } else {
-            // Future: add generic search/listing logic. For now return empty or limited.
             return ResponseEntity.ok(List.of());
         }
         
@@ -88,7 +100,7 @@ public class OrderController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get order details", description = "Fetches an order by its unique ID. Accessible by owner and staff.")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<OrderResponse> getOrderById(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal
@@ -96,8 +108,8 @@ public class OrderController {
         Order order = getOrderByIdUseCase.execute(id);
 
         // IDOR protection: customers only see their own orders.
-        // Guest orders (customerId == null) are also protected from customers.
-        if (principal.getRoles().contains("ROLE_CUSTOMER")) {
+        // Guests can see any order they have the UUID for.
+        if (principal != null && principal.getRoles().contains("ROLE_CUSTOMER")) {
             if (order.getCustomerId() == null || !order.getCustomerId().equals(principal.getUserId())) {
                 throw new ForbiddenException("Access denied: you can only view your own orders");
             }
@@ -108,7 +120,7 @@ public class OrderController {
 
     @GetMapping("/kanban")
     @Operation(summary = "Get Kanban view", description = "Fetches a list of orders for Kanban board filtered by status. Accessible by staff.")
-    @PreAuthorize("hasAnyRole('CASHIER', 'FLORIST', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CASHIER', 'FLORIST', 'ADMIN', 'OWNER')")
     public ResponseEntity<List<OrderKanbanResponse>> getKanban(
             @RequestParam OrderStatus status,
             @RequestParam(defaultValue = "50") int limit
@@ -122,7 +134,7 @@ public class OrderController {
 
     @PutMapping("/{id}/status")
     @Operation(summary = "Update order status", description = "Changes the status of an order. Accessible by staff (cashier, florist, admin).")
-    @PreAuthorize("hasAnyRole('CASHIER', 'FLORIST', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CASHIER', 'FLORIST', 'ADMIN', 'OWNER')")
     public ResponseEntity<OrderResponse> updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateOrderStatusRequest request

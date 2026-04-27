@@ -8,14 +8,21 @@ import ru.florify.order.domain.model.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 public record CreateOrderRequest(
+        @NotNull
+        UUID storeId,
+
+        UUID customerId,
+
         @NotEmpty
         List<OrderItemDto> items,
         
         BigDecimal bonusPointsUsed,
 
         String guestPhone,
+
         String guestName,
 
         @NotNull
@@ -25,6 +32,10 @@ public record CreateOrderRequest(
         OrderSource source,
 
         @NotNull
-        PaymentMethod paymentMethod
+        PaymentMethod paymentMethod,
+
+        String deliveryAddress,
+        UUID deliverySlotId,
+        UUID deliveryZoneId
 ) {
 }

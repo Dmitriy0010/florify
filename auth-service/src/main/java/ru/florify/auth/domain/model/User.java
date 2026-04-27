@@ -19,8 +19,7 @@ public record User(
     String passwordHash,
     Set<Role> roles,
     boolean active,
-    Instant createdAt,
-    Integer version
+    Instant createdAt
 ) {
 
     @Override
@@ -38,23 +37,19 @@ public record User(
 
     // Manual "with" methods for cloning with changes
     public User withEmail(String email) {
-        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt, version);
+        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt);
     }
 
     public User withRoles(Set<Role> roles) {
-        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt, version);
+        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt);
     }
 
     public User withPasswordHash(String passwordHash) {
-        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt, version);
+        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt);
     }
 
     public User withActive(boolean active) {
-        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt, version);
-    }
-    
-    public User withVersion(Integer version) {
-        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt, version);
+        return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt);
     }
 
     /**
@@ -74,7 +69,6 @@ public record User(
         private Set<Role> roles;
         private boolean active;
         private Instant createdAt;
-        private Integer version;
 
         public UserBuilder id(UUID id) { this.id = id; return this; }
         public UserBuilder email(String email) { this.email = email; return this; }
@@ -85,10 +79,9 @@ public record User(
         public UserBuilder roles(Set<Role> roles) { this.roles = roles; return this; }
         public UserBuilder active(boolean active) { this.active = active; return this; }
         public UserBuilder createdAt(Instant createdAt) { this.createdAt = createdAt; return this; }
-        public UserBuilder version(Integer version) { this.version = version; return this; }
 
         public User build() {
-            return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt, version);
+            return new User(id, email, phone, firstName, lastName, passwordHash, roles, active, createdAt);
         }
     }
 }

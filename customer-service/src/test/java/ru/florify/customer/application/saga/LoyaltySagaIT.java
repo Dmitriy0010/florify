@@ -42,7 +42,7 @@ class LoyaltySagaIT extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Saga Step 1: OrderCreated -> ReservePoints -> Outbox -> Kafka")
+    @DisplayName("Saga Step 1: OrderCreated -> ReservePoints")
     void shouldProcessOrderCreatedAndReservePoints() {
         // Given
         UUID customerId = UUID.randomUUID();

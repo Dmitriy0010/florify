@@ -16,9 +16,11 @@ import java.util.UUID;
 public interface StockWebMapper {
 
     @Mapping(target = "performerId", source = "performerId")
+    @Mapping(target = "storeId", source = "request.storeId")
     ReceiveStockCommand toCommand(ReceiveStockRequest request, UUID performerId);
 
     @Mapping(target = "performerId", source = "performerId")
+    @Mapping(target = "storeId", source = "request.storeId")
     WriteOffCommand toCommand(WriteOffRequest request, UUID performerId);
 
     StockBalanceResponse toResponse(StockBalance balance);

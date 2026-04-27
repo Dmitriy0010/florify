@@ -33,10 +33,13 @@ class OrderTest {
                 "ORD-001",
                 "idemp-001",
                 items,
-                new BigDecimal("50"),
+                50,                      // bonusPointsUsed (int)
                 OrderType.DELIVERY,
                 OrderSource.WEB,
                 PaymentMethod.ONLINE,
+                "Test Address",          // deliveryAddress
+                null,                    // deliverySlotId
+                null,                    // deliveryZoneId
                 Instant.now(clock)
         );
 

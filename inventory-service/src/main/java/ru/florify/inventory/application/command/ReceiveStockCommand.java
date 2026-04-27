@@ -6,6 +6,8 @@ import java.util.UUID;
 
 public record ReceiveStockCommand(
         UUID productId,
+        UUID storeId,
+        UUID supplierId,
         BigDecimal quantity,
         BigDecimal purchasePrice,
         String sourceDocumentId,

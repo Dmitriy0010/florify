@@ -19,7 +19,8 @@ public record RegisterRequest(
 
         String firstName,
         String lastName,
-        String deviceInfo
+        String deviceInfo,
+        String role
 ) {
     public RegisterRequest {
         if (deviceInfo == null) deviceInfo = "unknown";

@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.florify.catalog.application.command.DeactivateProductCommand;
-import ru.florify.catalog.application.outbox.CatalogOutboxEvent;
 import ru.florify.catalog.application.port.in.DeactivateProductUseCase;
-import ru.florify.catalog.application.port.out.CatalogOutboxRepository;
+import ru.florify.catalog.application.port.out.CatalogEventPublisher;
 import ru.florify.catalog.application.port.out.ProductCachePort;
 import ru.florify.catalog.application.port.out.ProductRepository;
 import ru.florify.catalog.domain.event.ProductDeactivatedEvent;
@@ -23,7 +22,7 @@ import java.util.Map;
 public class DeactivateProductInteractor implements DeactivateProductUseCase {
 
     private final ProductRepository productRepository;
-    private final CatalogOutboxRepository CatalogOutboxRepository;
+    private final CatalogEventPublisher catalogEventPublisher;
     private final ProductCachePort cachePort;
     private final Clock clock;
 
@@ -38,11 +37,11 @@ public class DeactivateProductInteractor implements DeactivateProductUseCase {
 
         cachePort.evict(product.getId());
 
-        CatalogOutboxRepository.save(CatalogOutboxEvent.create(
+        catalogEventPublisher.publish(
                 "catalog.product.deactivated",
                 deactivated.getId().toString(),
                 ProductDeactivatedEvent.from(deactivated, now),
-                now, Map.of()
-        ));
+                Map.of()
+        );
     }
 }

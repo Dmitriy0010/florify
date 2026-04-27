@@ -1,0 +1,113 @@
+# ==================================================
+# LLM-OPTIMIZED PROJECT EXPORT (PRODUCTION ONLY)
+# ==================================================
+
+$projectPath = Get-Location
+$outputFile  = "$projectPath\LLM_CONTEXT_PROD.txt"
+
+# Исключаемые папки (в любом месте проекта)
+$excludeDirs = @("bin", "build", "target", ".git", ".idea", ".gradle", "node_modules", "__pycache__")
+
+# Разрешенные файлы
+$includeExtensions = @(".java", ".kt", ".xml", ".yml", ".yaml", ".properties", ".gradle", ".md", ".sql", ".py", ".env")
+$includeFileNames = @("Dockerfile", "docker-compose.yml", "requirements.txt", "alembic.ini")
+
+$sb = New-Object System.Text.StringBuilder
+[void]$sb.AppendLine("### PROJECT CONTEXT FOR LLM (PRODUCTION ONLY)")
+[void]$sb.AppendLine("### Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+[void]$sb.AppendLine("### Root: $($projectPath.Path)")
+[void]$sb.AppendLine("")
+[void]$sb.AppendLine("### Notes for LLM:")
+[void]$sb.AppendLine("- ONLY production source code included")
+[void]$sb.AppendLine("- src/test is STRICTLY excluded")
+[void]$sb.AppendLine("- Root 'out', bin, build, target excluded")
+[void]$sb.AppendLine("- Internal 'out' packages (Hexagonal Arch) are INCLUDED")
+[void]$sb.AppendLine("==================================================")
+[void]$sb.AppendLine("")
+
+# Списки для хранения найденных данных (собираем за один проход)
+$treeLines = New-Object System.Collections.Generic.List[string]
+$sourceFiles = New-Object System.Collections.Generic.List[System.IO.FileInfo]
+
+# Очередь для быстрого обхода (BFS) - чтобы НЕ заходить в исключенные папки
+$queue = New-Object System.Collections.Generic.Queue[string]
+$queue.Enqueue($projectPath.Path)
+
+while ($queue.Count -gt 0) {
+    $currentDir = $queue.Dequeue()
+
+    # Записываем папку для дерева (кроме корневой)
+    if ($currentDir -ne $projectPath.Path) {
+        $treeLines.Add($currentDir.Substring($projectPath.Path.Length))
+    }
+
+    $items = Get-ChildItem -Path $currentDir -ErrorAction SilentlyContinue
+
+    foreach ($item in $items) {
+        if ($item.PSIsContainer) {
+            $dirName = $item.Name
+
+            # 1. Глобальные исключения мусорных папок
+            if ($dirName -in $excludeDirs) { continue }
+
+            # 2. Исключаем src/test
+            if ($item.FullName -match "\\src\\test(\\|$)") { continue }
+
+            # 3. Исключаем КОРНЕВОЙ out (для IDEA), но оставляем вложенные out (для Гексагональной архитектуры)
+            if ($dirName -eq "out" -and $currentDir -eq $projectPath.Path) { continue }
+
+            # Если проверки пройдены, добавляем папку в очередь на обход
+            $queue.Enqueue($item.FullName)
+        } else {
+            # Проверка файлов
+            $ext = $item.Extension
+            $name = $item.Name
+
+            if ($name -in $includeFileNames -or $ext -in $includeExtensions) {
+                $sourceFiles.Add($item)
+            }
+        }
+    }
+}
+
+# ================= PROJECT TREE =================
+[void]$sb.AppendLine("SECTION: PROJECT TREE (PRODUCTION ONLY)")
+[void]$sb.AppendLine("--------------------------------------------------")
+foreach ($line in $treeLines) {
+    [void]$sb.AppendLine($line)
+}
+[void]$sb.AppendLine("")
+[void]$sb.AppendLine("==================================================")
+[void]$sb.AppendLine("")
+
+# ================= SOURCE FILES =================
+[void]$sb.AppendLine("SECTION: SOURCE FILES (PRODUCTION ONLY)")
+[void]$sb.AppendLine("--------------------------------------------------")
+
+foreach ($file in $sourceFiles | Sort-Object FullName) {
+    $relativePath = $file.FullName.Substring($projectPath.Path.Length)
+    $fileType = $file.Extension.Trim('.')
+    if ([string]::IsNullOrEmpty($fileType)) { $fileType = $file.Name }
+
+    [void]$sb.AppendLine("")
+    [void]$sb.AppendLine("<<<FILE path=""$relativePath"" type=""$fileType"" scope=""production"">>>")
+    [void]$sb.AppendLine("")
+
+    try {
+        $content = Get-Content $file.FullName -Raw
+        [void]$sb.AppendLine($content)
+    } catch {
+        [void]$sb.AppendLine("// ERROR: Could not read file content //")
+    }
+
+    [void]$sb.AppendLine("")
+    [void]$sb.AppendLine("<<<END FILE>>>")
+}
+
+# ================= WRITE TO FILE =================
+Remove-Item $outputFile -ErrorAction SilentlyContinue
+Set-Content -Path $outputFile -Value $sb.ToString() -Encoding UTF8
+
+Write-Host "✅ DONE"
+Write-Host "Production-only LLM context created:"
+Write-Host "  $outputFile"

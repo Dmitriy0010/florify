@@ -4,6 +4,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import ru.florify.customer.adapter.in.web.dto.LoyaltyAccountResponse;
 import ru.florify.customer.adapter.in.web.dto.LoyaltyTransactionResponse;
+import ru.florify.customer.adapter.out.persistence.entity.LoyaltyTransactionJpaEntity;
 import ru.florify.customer.domain.model.LoyaltyAccount;
 import ru.florify.customer.domain.model.LoyaltyTransaction;
 
@@ -14,4 +15,6 @@ public interface LoyaltyWebMapper {
     LoyaltyAccountResponse toResponse(LoyaltyAccount domain);
 
     LoyaltyTransactionResponse toResponse(LoyaltyTransaction domain);
+
+    LoyaltyTransactionResponse toResponse(LoyaltyTransactionJpaEntity entity);
 }

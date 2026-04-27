@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.florify.catalog.application.command.CreateProductCommand;
-import ru.florify.catalog.application.outbox.CatalogOutboxEvent;
 import ru.florify.catalog.application.port.in.CreateProductUseCase;
-import ru.florify.catalog.application.port.out.CatalogOutboxRepository;
+import ru.florify.catalog.application.port.out.CatalogEventPublisher;
 import ru.florify.catalog.application.port.out.ProductRepository;
 import ru.florify.catalog.domain.event.ProductCreatedEvent;
 import ru.florify.catalog.domain.model.Product;
@@ -22,7 +21,7 @@ import java.util.UUID;
 public class CreateProductInteractor implements CreateProductUseCase {
 
     private final ProductRepository productRepository;
-    private final CatalogOutboxRepository CatalogOutboxRepository;
+    private final CatalogEventPublisher catalogEventPublisher;
     private final Clock clock;
 
     @Override
@@ -48,19 +47,18 @@ public class CreateProductInteractor implements CreateProductUseCase {
             .imageUrl(command.imageUrl())
             .defaultShelfLifeDays(command.defaultShelfLifeDays())
             .active(true)
-            .version(0)
             .createdAt(now)
             .updatedAt(now)
             .build();
 
         Product saved = productRepository.save(product);
 
-        CatalogOutboxRepository.save(CatalogOutboxEvent.create(
+        catalogEventPublisher.publish(
             "catalog.product.created",
             saved.getId().toString(),
             ProductCreatedEvent.from(saved, now),
-            now, Map.of()
-        ));
+            Map.of()
+        );
 
         return saved;
     }

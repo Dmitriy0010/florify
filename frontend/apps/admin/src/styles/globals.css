@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base Neutral Colors */
+    --color-bg-canvas: #F8F8F6;
+    --color-bg-surface: #FFFFFF;
+    --color-bg-sunken: #F1F0ED;
+    --color-border: #E5E4E0;
+    --color-border-hover: #C9C8C4;
+
+    /* Text Colors */
+    --color-text-primary: #1A1917;
+    --color-text-secondary: #4A4945;
+    --color-text-tertiary: #7D7C78;
+    --color-text-inverse: #FFFFFF;
+
+    /* Brand Colors */
+    --color-brand: #3D7A5E;
+    --color-brand-hover: #2F6249;
+    --color-brand-light: #EAF4EF;
+
+    /* Status Colors */
+    --color-status-new: #3B82F6;
+    --color-status-new-bg: #EFF6FF;
+    --color-status-assembled: #10B981;
+    --color-status-assembled-bg: #ECFDF5;
+    --color-status-courier: #F59E0B;
+    --color-status-courier-bg: #FFFBEB;
+    --color-status-done: #6B7280;
+    --color-status-done-bg: #F9FAFB;
+    --color-status-return: #EF4444;
+    --color-status-return-bg: #FEF2F2;
+
+    /* System States */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+    --color-info: #3B82F6;
+
+    /* shadcn/ui compatibility variables */
+    --background: 0 0% 100%;
+    --foreground: 20 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 10% 10%;
+    --primary: 153 33% 36%; /* --color-brand */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 45 13% 94%; /* --color-bg-sunken */
+    --secondary-foreground: 20 10% 10%;
+    --muted: 45 13% 94%;
+    --muted-foreground: 45 4% 41%; /* --color-text-secondary */
+    --accent: 153 33% 36% / 0.1;
+    --accent-foreground: 153 33% 36%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 45 6% 89%; /* --color-border */
+    --input: 45 6% 89%;
+    --ring: 153 33% 36%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-[var(--color-bg-canvas)] text-[var(--color-text-primary)] font-body;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pricing-bold {
+    @apply font-heading font-bold tabular-nums tracking-tighter;
+  }
+}

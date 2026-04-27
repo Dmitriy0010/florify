@@ -10,8 +10,8 @@ import ru.florify.customer.domain.exception.InsufficientPointsException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,13 +34,25 @@ public class LoyaltyAccount {
     private final int pointsBalance;
     private final int reservedPoints;    // Blocked points until order confirmation
     private final BigDecimal totalSpent;
-    private final int version;
     private final Instant createdAt;
     private final Instant updatedAt;
 
     /** Available points for new reservation */
     public int availablePoints() {
         return pointsBalance - reservedPoints;
+    }
+
+    /** Manual Earn Points */
+    public LoyaltyAccount earnPoints(int points, Instant now) {
+        return this.withPointsBalance(this.pointsBalance + points).withUpdatedAt(now);
+    }
+
+    /** Manual Withdraw Points */
+    public LoyaltyAccount withdrawPoints(int points, Instant now) {
+        if (this.pointsBalance < points) {
+            throw new InsufficientPointsException("Balance: %d, requested: %d".formatted(this.pointsBalance, points));
+        }
+        return this.withPointsBalance(this.pointsBalance - points).withUpdatedAt(now);
     }
 
     /** Reservation on order creation */
@@ -72,20 +84,16 @@ public class LoyaltyAccount {
     }
 
     /**
-     * Tier upgrade check.
-     * Tier comparison via tierRank from config — never via ordinal().
+     * Tier upgrade check using built-in tier thresholds (see {@link LoyaltyTier}).
      */
-    public LoyaltyAccount upgradeTierIfNeeded(List<LoyaltyTierConfig> configs, Instant now) {
-        int currentRank = configs.stream()
-            .filter(c -> c.getTier() == this.tier)
-            .mapToInt(LoyaltyTierConfig::getTierRank)
-            .findFirst().orElse(0);
+    public LoyaltyAccount upgradeTierIfNeeded(Instant now) {
+        int currentRank = this.tier.getTierRank();
 
-        return configs.stream()
-            .filter(c -> this.totalSpent.compareTo(c.getMinSpend()) >= 0)
-            .filter(c -> c.getTierRank() > currentRank)
-            .max(Comparator.comparingInt(LoyaltyTierConfig::getTierRank))
-            .map(c -> this.withTier(c.getTier()).withUpdatedAt(now))
+        return Arrays.stream(LoyaltyTier.values())
+            .filter(t -> this.totalSpent.compareTo(t.getMinSpend()) >= 0)
+            .filter(t -> t.getTierRank() > currentRank)
+            .max(Comparator.comparingInt(LoyaltyTier::getTierRank))
+            .map(t -> this.withTier(t).withUpdatedAt(now))
             .orElse(this);
     }
 }

@@ -26,7 +26,6 @@ public class Product {
     private final String imageUrl;          // nullable; link to media-service
     private final int defaultShelfLifeDays; // for inventory management
     private final boolean active;
-    private final int version;
     private final Instant createdAt;
     private final Instant updatedAt;
 
@@ -39,6 +38,10 @@ public class Product {
 
     public Product deactivate(Instant now) {
         return this.withActive(false).withUpdatedAt(now);
+    }
+
+    public Product activate(Instant now) {
+        return this.withActive(true).withUpdatedAt(now);
     }
 
     public Product update(String name, String description, UUID categoryId,

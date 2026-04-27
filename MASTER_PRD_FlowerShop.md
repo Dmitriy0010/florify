@@ -13,19 +13,18 @@
 4. [Архитектура системы (High-Level)](#4-архитектура-системы-high-level)
 5. [Микросервисы — Обзор](#5-микросервисы--обзор)
 6. [Детальный план каждого сервиса](#6-детальный-план-каждого-сервиса)
-   - 6.1 api-gateway
-   - 6.2 auth-service
-   - 6.3 product-catalog-service
-   - 6.4 inventory-service
-   - 6.5 order-service
-   - 6.6 customer-service (CRM + Loyalty)
-   - 6.7 supplier-service
-   - 6.8 employee-service
-   - 6.9 finance-service
-   - 6.10 notification-service
-   - 6.11 analytics-service
-   - 6.12 delivery-service
-   - 6.13 media-service
+   - 6.1 auth-service
+   - 6.2 product-catalog-service
+   - 6.3 inventory-service
+   - 6.4 order-service
+   - 6.5 customer-service (CRM + Loyalty)
+   - 6.6 supplier-service
+   - 6.7 employee-service
+   - 6.8 finance-service
+   - 6.9 notification-service
+   - 6.10 analytics-service
+   - 6.11 delivery-service
+   - 6.12 media-service
 7. [Фронтенд — Модули и UX](#7-фронтенд--модули-и-ux)
 8. [Kafka — Топики и события](#8-kafka--топики-и-события)
 9. [Инфраструктура и DevOps](#9-инфраструктура-и-devops)
@@ -191,47 +190,9 @@
 
 ---
 
-### 6.1 `api-gateway`
-
-**Ответственность:** Единая точка входа. Никакой бизнес-логики.
-
-**Технология:** Spring Cloud Gateway (WebFlux-based)
-
-#### Функции
-- Роутинг запросов к downstream-сервисам по prefix-пути (`/api/v1/orders/**` → `order-service`)
-- Валидация JWT-токена (без обращения к `auth-service` — только проверка подписи по публичному ключу)
-- Добавление заголовков `X-User-Id`, `X-User-Roles` в downstream-запросы
-- Rate Limiting (Redis-based, по userId или IP)
-- CORS-политика
-- Логирование всех входящих запросов (трейс-ID для OpenTelemetry)
-
-#### Конфигурация роутов (пример)
-```yaml
-spring:
-  cloud:
-    gateway:
-      routes:
-        - id: order-service
-          uri: lb://order-service
-          predicates:
-            - Path=/api/v1/orders/**
-          filters:
-            - AuthFilter  # кастомный фильтр
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 40
-```
-
-#### Публичные пути (без JWT)
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/register`
-- `GET /api/v1/catalog/products` (просмотр каталога для гостей)
-- `POST /api/v1/orders/guest` (гостевой заказ)
-
 ---
 
-### 6.2 `auth-service`
+### 6.1 `auth-service`
 
 **Ответственность:** Аутентификация и авторизация.
 
@@ -293,7 +254,7 @@ POST   /api/v1/auth/users/{userId}/role  (OWNER only)
 
 ---
 
-### 6.3 `product-catalog-service`
+### 6.2 `product-catalog-service`
 
 **Ответственность:** Справочник товаров. Не хранит остатки — только описание.
 
@@ -363,7 +324,7 @@ POST   /api/v1/catalog/categories       (ADMIN, OWNER)
 
 ---
 
-### 6.4 `inventory-service`
+### 6.3 `inventory-service`
 
 **Ответственность:** Партионный учёт остатков, FIFO, списания, инвентаризация.
 
@@ -474,7 +435,7 @@ GET    /api/v1/inventory/low-stock            (остатки ниже поро�
 
 ---
 
-### 6.5 `order-service`
+### 6.4 `order-service`
 
 **Ответственность:** Жизненный цикл заказа от создания до завершения.
 
@@ -589,7 +550,7 @@ GET    /api/v1/orders/stream           (Server-Sent Events — live обновл
 
 ---
 
-### 6.6 `customer-service` (CRM + Loyalty)
+### 6.5 `customer-service` (CRM + Loyalty)
 
 **Ответственность:** База клиентов, история взаимодействий, программа лояльности.
 
@@ -694,7 +655,7 @@ PUT    /api/v1/loyalty/tiers/config     (OWNER — настройка уровн
 
 ---
 
-### 6.7 `supplier-service`
+### 6.6 `supplier-service`
 
 **Ответственность:** Управление поставщиками, закупки, накладные.
 
@@ -767,7 +728,7 @@ POST   /api/v1/invoices/{id}/cancel
 
 ---
 
-### 6.8 `employee-service`
+### 6.7 `employee-service`
 
 **Ответственность:** Справочник сотрудников, расписания, KPI, расчёт зарплаты.
 
@@ -854,7 +815,7 @@ POST   /api/v1/timesheet/checkout
 
 ---
 
-### 6.9 `finance-service`
+### 6.8 `finance-service`
 
 **Ответственность:** P&L (Прибыли и убытки), сводные финансовые отчёты.
 
@@ -927,7 +888,7 @@ GET    /api/v1/finance/export          ?format=xlsx&from=&to=
 
 ---
 
-### 6.10 `notification-service`
+### 6.9 `notification-service`
 
 **Ответственность:** Отправка уведомлений по всем каналам.
 
@@ -969,7 +930,7 @@ NotificationLog
 
 ---
 
-### 6.11 `analytics-service`
+### 6.10 `analytics-service`
 
 **Ответственность:** Агрегация метрик, дашборды, отчёты.
 
@@ -1018,7 +979,7 @@ GET    /api/v1/analytics/export           ?report=pnl|sales|inventory&format=xls
 
 ---
 
-### 6.12 `delivery-service`
+### 6.11 `delivery-service`
 
 **Ответственность:** Зоны доставки, слоты, назначение курьеров.
 
@@ -1077,7 +1038,7 @@ POST   /api/v1/delivery/geocode            ?address=
 
 ---
 
-### 6.13 `media-service`
+### 6.12 `media-service`
 
 **Ответственность:** Загрузка и раздача медиафайлов (изображения товаров).
 
@@ -1390,29 +1351,26 @@ Merge to main → CD:
 ## 11. Фазы разработки (Roadmap)
 
 ### 🏗️ Фаза 0 — Инфраструктура (1–2 недели)
-- [ ] Настройка монорепозитория (Gradle multi-module)
-- [ ] `docker-compose.yml` с PostgreSQL, Kafka, Redis, MinIO
-- [ ] `libs/common-domain`, `libs/common-events`, `libs/common-security`
-- [ ] GitHub Actions: базовый CI pipeline
-- [ ] `api-gateway` с JWT-фильтром
+- [x] Настройка монорепозитория (Gradle multi-module)
+- [x] `docker-compose.yml` с PostgreSQL, Kafka, Redis, MinIO
+- [x] `libs/common-domain`, `libs/common-events`, `libs/common-security`
+- [x] GitHub Actions: базовый CI pipeline
 
 ### 🔐 Фаза 1 — Ядро системы (3–4 недели)
-- [ ] `auth-service`: регистрация, логин, JWT, роли
-- [ ] `product-catalog-service`: CRUD товаров, категории, цены
-- [ ] `inventory-service`: партии FIFO, приёмка, списание, WAC (уже начат!)
-- [ ] `media-service`: upload/download через MinIO
-- [ ] Фронтенд: Auth, базовый каталог, склад
+- [x] `auth-service`: регистрация, логин, JWT, роли
+- [x] `product-catalog-service`: CRUD товаров, категории, цены
+- [x] `inventory-service`: партии FIFO, приёмка, списание, WAC
+- [x] `media-service`: upload/download через MinIO (Foundation)
+- [/] Фронтенд: Auth, базовый каталог, склад
 
 ### 🛒 Фаза 2 — Операционный контур (3–4 недели)
-- [ ] `order-service`: создание заказов, Канбан-доска, SSE
-- [ ] `supplier-service`: поставщики, накладные
-- [ ] `notification-service`: email + push
-- [ ] POS-модуль на фронтенде (кассир)
-- [ ] Канбан-доска заказов
+- [x] `order-service`: создание заказов, Канбан-доска, SSE
+- [x] `supplier-service`: поставщики, накладные
+- [x] `notification-service`: email + push
 
 ### 👥 Фаза 3 — CRM и Персонал (2–3 недели)
-- [ ] `customer-service`: CRM, программа лояльности, баллы
-- [ ] `employee-service`: сотрудники, KPI, расчёт зарплаты
+- [x] `customer-service`: CRM, программа лояльности, баллы
+- [x] `employee-service`: сотрудники, KPI, расчёт зарплаты
 - [ ] `delivery-service`: зоны, слоты, курьеры
 - [ ] Клиентский ЛК (B2C)
 

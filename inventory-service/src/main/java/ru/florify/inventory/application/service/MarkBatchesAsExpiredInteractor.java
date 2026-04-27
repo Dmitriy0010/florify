@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,10 +46,19 @@ public class MarkBatchesAsExpiredInteractor implements MarkBatchesAsExpiredUseCa
 
         log.info("Found {} batches to expire", expiredBatches.size());
 
-        // Group expired quantities by productId to minimize DB calls for StockBalance
-        Map<java.util.UUID, java.math.BigDecimal> totalExpiredByProduct = expiredBatches.stream()
+        // 1. Update Batches to EXPIRED status
+        List<StockBatch> updatedBatches = expiredBatches.stream()
+                .map(batch -> batch.withStatus(BatchStatus.EXPIRED))
+                .toList();
+        stockBatchRepository.saveAll(updatedBatches);
+
+        // 2. Group expired quantities by productId AND storeId to sync balances correctly
+        // We use a helper structure or just group by a custom key. For simplicity, we'll use groupingBy.
+        record ProductStoreKey(UUID productId, UUID storeId) {}
+
+        Map<ProductStoreKey, java.math.BigDecimal> totalsToDegrade = updatedBatches.stream()
                 .collect(Collectors.groupingBy(
-                        StockBatch::getProductId,
+                        batch -> new ProductStoreKey(batch.getProductId(), batch.getStoreId()),
                         Collectors.reducing(
                                 java.math.BigDecimal.ZERO,
                                 StockBatch::getQuantityRemaining,
@@ -56,23 +66,19 @@ public class MarkBatchesAsExpiredInteractor implements MarkBatchesAsExpiredUseCa
                         )
                 ));
 
-        // 1. Update Batches
-        List<StockBatch> updatedBatches = expiredBatches.stream()
-                .map(batch -> batch.withStatus(BatchStatus.EXPIRED))
-                .toList();
-        stockBatchRepository.saveAll(updatedBatches);
-
-        // 2. Sync Global Balance and Publish Events
-        totalExpiredByProduct.forEach((productId, expiredQty) -> {
+        // 3. Sync Balances for each product-store combination
+        totalsToDegrade.forEach((key, expiredQty) -> {
             if (expiredQty.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                StockBalance balance = balanceLookup.findByProductId(productId)
-                        .orElseThrow(() -> new NotFoundException("ProductBalance", productId));
+                StockBalance balance = balanceLookup.findByProductIdAndStoreId(key.productId(), key.storeId())
+                        .orElseThrow(() -> new NotFoundException("StockBalance", 
+                                key.productId() + " in store " + key.storeId()));
 
                 StockBalance updatedBalance = balance.writeOff(expiredQty);
                 balancePersist.save(updatedBalance);
 
-                eventPublisher.publish(StockExpiredEvent.from(productId, expiredQty, now));
-                log.info("Expired {} units for product {}", expiredQty, productId);
+                // Publish event (could be updated later to include storeId if needed by subscribers)
+                eventPublisher.publish(StockExpiredEvent.from(key.productId(), expiredQty, now));
+                log.info("Expired {} units for product {} in store {}", expiredQty, key.productId(), key.storeId());
             }
         });
 

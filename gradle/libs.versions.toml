@@ -22,6 +22,7 @@ spring-boot-starter-validation = { module = "org.springframework.boot:spring-boo
 spring-boot-starter-security   = { module = "org.springframework.boot:spring-boot-starter-security" }
 spring-boot-starter-actuator   = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-websocket  = { module = "org.springframework.boot:spring-boot-starter-websocket" }
 spring-boot-starter-kafka      = { module = "org.springframework.boot:spring-boot-starter-kafka" }
 spring-kafka                   = { module = "org.springframework.kafka:spring-kafka" }
 springdoc-openapi              = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springDoc" }
@@ -50,11 +51,13 @@ commons-codec                  = { module = "commons-codec:commons-codec", versi
 
 # Testing
 spring-boot-starter-test       = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-security-test           = { module = "org.springframework.security:spring-security-test" }
 testcontainers-bom             = { module = "org.testcontainers:testcontainers-bom",  version.ref = "testcontainers" }
 testcontainers-postgres        = { module = "org.testcontainers:postgresql" }
 testcontainers-kafka           = { module = "org.testcontainers:kafka" }
 testcontainers-junit-jupiter   = { module = "org.testcontainers:junit-jupiter" }
 spring-kafka-test              = { module = "org.springframework.kafka:spring-kafka-test" }
+h2                             = { module = "com.h2database:h2" }
 
 [plugins]
 spring-boot              = { id = "org.springframework.boot",          version.ref = "springBoot" }

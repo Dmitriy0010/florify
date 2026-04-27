@@ -4,9 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.florify.catalog.application.command.UpdateProductCommand;
-import ru.florify.catalog.application.outbox.CatalogOutboxEvent;
 import ru.florify.catalog.application.port.in.UpdateProductUseCase;
-import ru.florify.catalog.application.port.out.CatalogOutboxRepository;
+import ru.florify.catalog.application.port.out.CatalogEventPublisher;
 import ru.florify.catalog.application.port.out.ProductRepository;
 import ru.florify.catalog.domain.event.ProductUpdatedEvent;
 import ru.florify.catalog.domain.exception.ProductNotFoundException;
@@ -22,7 +21,7 @@ import java.util.Map;
 public class UpdateProductInteractor implements UpdateProductUseCase {
 
     private final ProductRepository productRepository;
-    private final CatalogOutboxRepository CatalogOutboxRepository;
+    private final CatalogEventPublisher catalogEventPublisher;
     private final Clock clock;
 
     @Override
@@ -43,12 +42,12 @@ public class UpdateProductInteractor implements UpdateProductUseCase {
 
         productRepository.save(updated);
 
-        CatalogOutboxRepository.save(CatalogOutboxEvent.create(
+        catalogEventPublisher.publish(
                 "catalog.product.updated",
                 updated.getId().toString(),
                 ProductUpdatedEvent.from(updated, now),
-                now, Map.of()
-        ));
+                Map.of()
+        );
 
         return updated;
     }

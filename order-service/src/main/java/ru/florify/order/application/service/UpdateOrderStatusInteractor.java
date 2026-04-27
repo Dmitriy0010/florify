@@ -2,18 +2,16 @@ package ru.florify.order.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.florify.common.event.*;
 import ru.florify.order.application.command.UpdateOrderStatusCommand;
-import ru.florify.order.application.outbox.OutboxEvent;
 import ru.florify.order.application.port.in.UpdateOrderStatusUseCase;
-import ru.florify.order.application.port.out.IdempotencyPort;
+import ru.florify.order.application.port.out.OrderEventPublisher;
 import ru.florify.order.application.port.out.OrderRepository;
-import ru.florify.order.application.port.out.OutboxRepository;
-import ru.florify.order.domain.event.OrderCancelledEvent;
-import ru.florify.order.domain.event.OrderCompletedEvent;
 import ru.florify.order.domain.event.OrderStatusChangedEvent;
 import ru.florify.order.domain.exception.OrderNotFoundException;
 import ru.florify.order.domain.model.Order;
@@ -21,6 +19,8 @@ import ru.florify.order.domain.model.OrderStatus;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,8 +28,8 @@ import java.time.Instant;
 public class UpdateOrderStatusInteractor implements UpdateOrderStatusUseCase {
 
     private final OrderRepository orderRepository;
-    private final OutboxRepository outboxRepository;
-    private final IdempotencyPort idempotencyPort;
+    private final OrderEventPublisher orderEventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     @Override
@@ -39,12 +39,13 @@ public class UpdateOrderStatusInteractor implements UpdateOrderStatusUseCase {
         log.info("Updating status for order {} to {}", command.orderId(), command.newStatus());
         Instant now = clock.instant();
 
-        // 1. Idempotency check: try to save event ID within the same transaction.
-        // If it's a duplicate, a constraint violation will be thrown and transaction rolled back.
-        idempotencyPort.saveProcessedEvent(command.eventId(), now);
-
-        Order order = orderRepository.findById(command.orderId())
+        Order order = orderRepository.findByIdWithItems(command.orderId())
                 .orElseThrow(() -> new OrderNotFoundException(command.orderId()));
+
+        if (order.getStatus() == command.newStatus()) {
+            log.info("Order {} already in status {}, skipping duplicate event", command.orderId(), command.newStatus());
+            return order;
+        }
 
         OrderStatus oldStatus = order.getStatus();
         
@@ -57,39 +58,111 @@ public class UpdateOrderStatusInteractor implements UpdateOrderStatusUseCase {
         
         Order savedOrder = orderRepository.save(order);
 
-        // Register Outbox event for the status change
+        // Direct publish status-change event
         OrderStatusChangedEvent event = OrderStatusChangedEvent.of(
                 savedOrder.getId(),
                 oldStatus,
                 command.newStatus(),
                 now
         );
-        
-        outboxRepository.save(OutboxEvent.create(
+
+        orderEventPublisher.publish(
                 "orders.order.status_changed",
                 savedOrder.getId().toString(),
-                event,
-                now
-        ));
+                event
+        );
 
-        // 2. Dedicated completion event
-        if (command.newStatus() == OrderStatus.COMPLETED) {
-            outboxRepository.save(OutboxEvent.create(
-                    "orders.order.completed",
+        // 2. Dedicated confirmation event (Triggers inventory write-off)
+        if (command.newStatus() == OrderStatus.CONFIRMED) {
+            List<OrderConfirmedEvent.OrderItem> eventItems = savedOrder.getItems().stream()
+                    .map(item -> new OrderConfirmedEvent.OrderItem(
+                            item.productId(),
+                            item.quantity(),
+                            item.unitPrice()
+                    ))
+                    .collect(Collectors.toList());
+
+            orderEventPublisher.publish(
+                    "orders.order.confirmed",
                     savedOrder.getId().toString(),
-                    OrderCompletedEvent.from(savedOrder, command.floristId(), now),
-                    now
-            ));
+                    new OrderConfirmedEvent(
+                            savedOrder.getId(),
+                            savedOrder.getStoreId(),
+                            command.floristId(),
+                            eventItems
+                    )
+            );
         }
 
-        // 3. Dedicated cancellation event
+        // 3. Dedicated completion event
+        if (command.newStatus() == OrderStatus.COMPLETED) {
+            orderEventPublisher.publish(
+                    "orders.order.completed",
+                    savedOrder.getId().toString(),
+                    OrderCompletedEvent.of(
+                            savedOrder.getId(),
+                            savedOrder.getCustomerId(),
+                            savedOrder.getStoreId(),
+                            savedOrder.getBonusPointsUsed(),
+                            savedOrder.getFinalAmount(),
+                            command.floristId(),
+                            now
+                    )
+            );
+            
+            // Map items for the spring event (used by inventory and finance)
+            List<ru.florify.common.event.OrderCompletedSpringEvent.ItemInfo> eventItems = savedOrder.getItems().stream()
+                    .map(item -> new ru.florify.common.event.OrderCompletedSpringEvent.ItemInfo(
+                            item.productId(),
+                            item.quantity()
+                    ))
+                    .collect(Collectors.toList());
+
+            // Spring Event для finance-service и customer-service (и теперь inventory)
+            eventPublisher.publishEvent(
+                    ru.florify.common.event.OrderCompletedSpringEvent.of(
+                            savedOrder.getId(), 
+                            savedOrder.getCustomerId(), 
+                            savedOrder.getStoreId(),
+                            savedOrder.getFinalAmount(), 
+                            savedOrder.getTotalCogs(),
+                            eventItems,
+                            now
+                    )
+            );
+        }
+
+        // 4. Dedicated cancellation event
         if (command.newStatus() == OrderStatus.CANCELLED) {
-            outboxRepository.save(OutboxEvent.create(
+            orderEventPublisher.publish(
                     "orders.order.cancelled",
                     savedOrder.getId().toString(),
-                    OrderCancelledEvent.from(savedOrder, now),
-                    now
-            ));
+                    OrderCancelledEvent.of(
+                            savedOrder.getId(),
+                            savedOrder.getCustomerId(),
+                            savedOrder.getBonusPointsUsed(),
+                            now
+                    )
+            );
+
+            // Spring Event для delivery-service
+            eventPublisher.publishEvent(
+                    OrderCancelledSpringEvent.of(savedOrder.getId(), savedOrder.getCustomerId(), now)
+            );
+        }
+
+        // 5. Spring Event при переводе заказа к курьеру
+        if (command.newStatus() == OrderStatus.OUT_FOR_DELIVERY) {
+            eventPublisher.publishEvent(
+                    OrderStatusChangedSpringEvent.of(
+                            savedOrder.getId(),
+                            oldStatus.name(),
+                            OrderStatus.OUT_FOR_DELIVERY.name(),
+                            savedOrder.getDeliveryAddress(),
+                            savedOrder.getCustomerId(),
+                            now
+                    )
+            );
         }
 
         return savedOrder;

@@ -4,11 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.florify.customer.application.command.CreateCustomerCommand;
-import ru.florify.customer.application.outbox.OutboxEvent;
 import ru.florify.customer.application.port.in.CreateCustomerUseCase;
+import org.springframework.context.ApplicationEventPublisher;
 import ru.florify.customer.application.port.out.CustomerRepository;
 import ru.florify.customer.application.port.out.LoyaltyAccountRepository;
-import ru.florify.customer.application.port.out.OutboxRepository;
 import ru.florify.customer.domain.enums.Gender;
 import ru.florify.customer.domain.enums.LoyaltyTier;
 import ru.florify.customer.domain.event.CustomerCreatedEvent;
@@ -31,7 +30,7 @@ public class CreateCustomerInteractor implements CreateCustomerUseCase {
 
     private final CustomerRepository customerRepository;
     private final LoyaltyAccountRepository loyaltyAccountRepository;
-    private final OutboxRepository outboxRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     @Override
@@ -55,10 +54,6 @@ public class CreateCustomerInteractor implements CreateCustomerUseCase {
             .userId(command.userId())
             .tags(List.of())
             .active(true)
-            .notificationPreferences(new ru.florify.customer.domain.model.NotificationPreferences(
-                null, true, false, true, true
-            ))
-            .version(0)
             .createdAt(now)
             .updatedAt(now)
             .build();
@@ -72,19 +67,12 @@ public class CreateCustomerInteractor implements CreateCustomerUseCase {
             .pointsBalance(0)
             .reservedPoints(0)
             .totalSpent(BigDecimal.ZERO)
-            .version(0)
             .createdAt(now)
             .updatedAt(now)
             .build();
         loyaltyAccountRepository.save(account);
 
-        outboxRepository.save(OutboxEvent.create(
-            "customers.customer.created",
-            saved.getId().toString(),
-            CustomerCreatedEvent.from(saved, now),
-            now,
-            currentTraceHeaders()            // OTel trace propagation placeholder
-        ));
+        eventPublisher.publishEvent(CustomerCreatedEvent.from(saved, now));
 
         return saved;
     }

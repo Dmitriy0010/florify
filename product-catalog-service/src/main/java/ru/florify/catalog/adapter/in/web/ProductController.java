@@ -9,7 +9,6 @@ import ru.florify.catalog.adapter.in.web.dto.*;
 import ru.florify.catalog.adapter.in.web.mapper.ProductWebMapper;
 import ru.florify.catalog.application.command.*;
 import ru.florify.catalog.application.port.in.*;
-import ru.florify.catalog.application.port.out.PriceHistoryRepository;
 import ru.florify.catalog.application.query.GetCatalogQuery;
 import ru.florify.catalog.domain.model.Product;
 import ru.florify.common.application.query.PagedResult;
@@ -29,10 +28,9 @@ public class ProductController {
     private final UpdatePriceUseCase updatePriceUseCase;
     private final BulkPriceUpdateUseCase bulkPriceUpdateUseCase;
     private final DeactivateProductUseCase deactivateProductUseCase;
+    private final ActivateProductUseCase activateProductUseCase;
     private final GetProductByIdUseCase getProductByIdUseCase;
     private final GetCatalogUseCase getCatalogUseCase;
-    private final PriceHistoryRepository priceHistoryRepository;
-
     private final ProductWebMapper mapper;
     private final UserProvider userProvider;
 
@@ -98,14 +96,10 @@ public class ProductController {
         deactivateProductUseCase.execute(new DeactivateProductCommand(id, userProvider.getCurrentUserId()));
     }
 
-    @GetMapping("/{id}/history")
+    @PostMapping("/{id}/activate")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
-    public List<PriceHistoryResponse> getPriceHistory(@PathVariable UUID id) {
-        return priceHistoryRepository.findByProductId(id).stream()
-                .map(h -> new PriceHistoryResponse(
-                        h.id(), h.oldPrice(), h.newPrice(),
-                        h.performerId(), h.reason(), h.occurredAt()
-                ))
-                .collect(Collectors.toList());
+    public ProductResponse activateProduct(@PathVariable UUID id) {
+        return mapper.toResponse(activateProductUseCase.execute(id, userProvider.getCurrentUserId()));
     }
+
 }

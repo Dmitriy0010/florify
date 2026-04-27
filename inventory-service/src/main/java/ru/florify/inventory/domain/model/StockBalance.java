@@ -23,12 +23,12 @@ public class StockBalance {
     @EqualsAndHashCode.Include
     private final UUID id;
     private final UUID productId;
+    private final UUID storeId;
     private final BigDecimal quantityInStock;
     private final BigDecimal averageCost;
-    private final Integer version;
 
-    public static StockBalance createEmpty(UUID productId) {
-        return new StockBalance(UUID.randomUUID(), productId, BigDecimal.ZERO, BigDecimal.ZERO, null);
+    public static StockBalance createEmpty(UUID productId, UUID storeId) {
+        return new StockBalance(UUID.randomUUID(), productId, storeId, BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
     /**
@@ -49,7 +49,7 @@ public class StockBalance {
         BigDecimal newAverageCost = currentTotalValue.add(addedValue)
                 .divide(newQuantity, 2, RoundingMode.HALF_UP);
 
-        return new StockBalance(this.id, this.productId, newQuantity, newAverageCost, this.version);
+        return new StockBalance(this.id, this.productId, this.storeId, newQuantity, newAverageCost);
     }
 
     /**
@@ -59,6 +59,6 @@ public class StockBalance {
         if (this.quantityInStock.compareTo(quantity) < 0) {
             throw new InsufficientStockException("Insufficient stock for product " + productId);
         }
-        return new StockBalance(this.id, this.productId, this.quantityInStock.subtract(quantity), this.averageCost, this.version);
+        return new StockBalance(this.id, this.productId, this.storeId, this.quantityInStock.subtract(quantity), this.averageCost);
     }
 }

@@ -4,7 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
@@ -42,7 +42,7 @@ class InventoryEventConsumerIT {
     @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
 
-    @MockBean
+    @MockitoBean
     private UpdateOrderStatusUseCase updateOrderStatusUseCase;
     
     // Minimal properties for JsonDeserializer if needed

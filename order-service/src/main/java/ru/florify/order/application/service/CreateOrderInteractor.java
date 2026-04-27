@@ -5,14 +5,12 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.florify.common.exception.DomainException;
+import ru.florify.common.event.OrderCreatedEvent;
 import ru.florify.order.application.command.CreateOrderCommand;
 import ru.florify.order.application.port.in.CreateOrderUseCase;
+import ru.florify.order.application.port.out.OrderEventPublisher;
 import ru.florify.order.application.port.out.OrderNumberGenerator;
 import ru.florify.order.application.port.out.OrderRepository;
-import ru.florify.order.application.port.out.OutboxRepository;
-import ru.florify.order.application.outbox.OutboxEvent;
-import ru.florify.order.domain.event.OrderCreatedEvent;
 import ru.florify.order.domain.model.Order;
 
 import java.math.BigDecimal;
@@ -24,8 +22,9 @@ import java.time.Instant;
 public class CreateOrderInteractor implements CreateOrderUseCase {
 
     private final OrderRepository orderRepository;
-    private final OutboxRepository outboxRepository;
+    private final OrderEventPublisher eventPublisher;
     private final OrderNumberGenerator orderNumberGenerator;
+    private final org.springframework.context.ApplicationEventPublisher applicationEventPublisher;
     private final Clock clock;
 
     @Override
@@ -47,20 +46,37 @@ public class CreateOrderInteractor implements CreateOrderUseCase {
                 command.type(),
                 command.source(),
                 command.paymentMethod(),
+                command.deliveryAddress(),
+                command.deliverySlotId(),
+                command.deliveryZoneId(),
+                command.storeId(), // storeId is 14th argument in Order.createNew
                 now
         );
         Order savedOrder = orderRepository.save(order);
 
-        OrderCreatedEvent event = OrderCreatedEvent.from(savedOrder, now);
-
-        OutboxEvent outboxEvent = OutboxEvent.create(
+        eventPublisher.publish(
                 "orders.order.created",
                 savedOrder.getId().toString(),  // Kafka key
-                event,
-                now
+                OrderCreatedEvent.of(
+                        savedOrder.getId(),
+                        savedOrder.getCustomerId(),
+                        savedOrder.getStoreId(),
+                        savedOrder.getBonusPointsUsed(),
+                        savedOrder.getTotalAmount(),
+                        now
+                )
         );
 
-        outboxRepository.save(outboxEvent);
+        applicationEventPublisher.publishEvent(
+                OrderCreatedEvent.of(
+                        savedOrder.getId(),
+                        savedOrder.getCustomerId(),
+                        savedOrder.getStoreId(),
+                        savedOrder.getBonusPointsUsed(),
+                        savedOrder.getTotalAmount(),
+                        now
+                )
+        );
 
         return savedOrder;
     }

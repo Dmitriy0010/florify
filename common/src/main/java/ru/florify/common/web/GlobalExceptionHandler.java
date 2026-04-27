@@ -1,16 +1,25 @@
 package ru.florify.common.web;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MultipartException;
 import ru.florify.common.exception.*;
 import ru.florify.common.web.ErrorResponse;
 
+import jakarta.validation.ConstraintViolationException;
+import java.time.format.DateTimeParseException;
 import java.util.stream.Collectors;
 
 /**
@@ -40,7 +49,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleOptimisticLocking(Exception ex) {
         log.warn("Optimistic locking failure: {}", ex.getMessage());
-        return ErrorResponse.of("CONCURRENT_UPDATE", "The record was updated by another process. Please retry.");
+        return ErrorResponse.of("CONCURRENT_UPDATE", "The record was updated by another user. Please refresh and try again.");
     }
 
     @ExceptionHandler(UnauthorizedException.class)
@@ -91,6 +100,73 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
         return ErrorResponse.of("VALIDATION_FAILED", details);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleMissingParams(MissingServletRequestParameterException ex) {
+        return ErrorResponse.of("MISSING_PARAMETER", "Required parameter '" + ex.getParameterName() + "' is missing");
+    }
+
+    @ExceptionHandler(DateTimeParseException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleDateTimeParse(DateTimeParseException ex) {
+        return ErrorResponse.of("INVALID_DATE_FORMAT", "Invalid date/time format. Use YYYY-MM (for periods) or ISO-8601.");
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Illegal argument: {}", ex.getMessage());
+        return ErrorResponse.of("RESOURCE_NOT_FOUND", ex.getMessage());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
+        log.warn("JSON parse error: {}", ex.getMessage());
+        return ErrorResponse.of("INVALID_REQUEST_BODY", "Check your JSON format and data types.");
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleConstraintViolation(ConstraintViolationException ex) {
+        String details = ex.getConstraintViolations().stream()
+                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                .collect(Collectors.joining("; "));
+        return ErrorResponse.of("VALIDATION_FAILED", details);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    public ErrorResponse handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Database integrity violation: {}", ex.getMessage());
+        return ErrorResponse.of("DATA_VIOLATION", "Database error: Value exceeds limit or violates constraints.");
+    }
+
+    @ExceptionHandler(TransactionSystemException.class)
+    public ResponseEntity<ErrorResponse> handleTransactionSystem(TransactionSystemException ex) {
+        Throwable cause = ex.getRootCause();
+        if (cause instanceof ConstraintViolationException constraintEx) {
+            return ResponseEntity.badRequest().body(handleConstraintViolation(constraintEx));
+        }
+        log.error("Transaction system error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ErrorResponse.of("INTERNAL_ERROR", "Transaction failed"));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        log.warn("Type mismatch for parameter {}: {}", ex.getName(), ex.getMessage());
+        return ErrorResponse.of("INVALID_PARAMETER", "Parameter '" + ex.getName() + "' has invalid type or format.");
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleMultipart(MultipartException ex) {
+        log.warn("Multipart error: {}", ex.getMessage());
+        return ErrorResponse.of("INVALID_MULTIPART", "Failed to parse multipart request. Check your boundary and format.");
     }
 
     @ExceptionHandler(Exception.class)

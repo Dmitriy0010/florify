@@ -24,4 +24,11 @@ public class GetOrdersByCustomerInteractor implements GetOrdersByCustomerUseCase
         log.debug("Fetching orders for customer {}", customerId);
         return orderRepository.findByCustomerId(customerId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Order> executeByFlorist(UUID floristId) {
+        log.debug("Fetching orders for florist {}", floristId);
+        return orderRepository.findByFloristId(floristId);
+    }
 }

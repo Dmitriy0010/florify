@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.jackson.Jacksonized;
 
 /**
  * Customer — Rich Domain Object (RDO).
@@ -20,6 +21,7 @@ import java.util.UUID;
 @Getter
 @Builder
 @With
+@Jacksonized
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Customer {
@@ -32,13 +34,13 @@ public class Customer {
     private final String firstName;
     private final String lastName;
     private final LocalDate birthDate;    // nullable
-    private final Gender gender;
+
+    @Builder.Default
+    private final Gender gender = Gender.UNSPECIFIED;
     private final CustomerSource source;
     private final List<String> tags;
     private final UUID userId;            // nullable; reference to auth-service
     private final boolean active;
-    private final NotificationPreferences notificationPreferences;
-    private final int version;
     private final Instant createdAt;
     private final Instant updatedAt;
 

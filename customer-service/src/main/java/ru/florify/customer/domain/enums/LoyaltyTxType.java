@@ -4,5 +4,6 @@ public enum LoyaltyTxType {
     EARN,
     RESERVE,
     CONFIRM,
-    RELEASE
+    RELEASE,
+    WITHDRAW
 }

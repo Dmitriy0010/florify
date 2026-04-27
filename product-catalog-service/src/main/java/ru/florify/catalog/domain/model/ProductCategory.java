@@ -19,7 +19,6 @@ public class ProductCategory {
     private String name;
     private String description;
     private boolean active;
-    private int version;
     private Instant createdAt;
     private Instant updatedAt;
 }

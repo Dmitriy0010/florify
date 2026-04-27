@@ -9,4 +9,8 @@ public class UnauthorizedException extends DomainException {
     public UnauthorizedException() {
         super("UNAUTHORIZED", "Authentication required");
     }
+
+    public UnauthorizedException(String errorCode, String message) {
+        super(errorCode, message);
+    }
 }

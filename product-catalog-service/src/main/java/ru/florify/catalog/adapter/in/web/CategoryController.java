@@ -6,6 +6,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.florify.catalog.adapter.in.web.dto.CategoryResponse;
+import ru.florify.catalog.application.command.CreateCategoryCommand;
+import ru.florify.catalog.application.command.UpdateCategoryCommand;
+import ru.florify.catalog.application.port.in.CreateCategoryUseCase;
+import ru.florify.catalog.application.port.in.UpdateCategoryUseCase;
 import ru.florify.catalog.application.port.out.CategoryRepository;
 import ru.florify.catalog.domain.model.ProductCategory;
 
@@ -19,6 +23,8 @@ import java.util.stream.Collectors;
 public class CategoryController {
 
     private final CategoryRepository categoryRepository;
+    private final CreateCategoryUseCase createCategoryUseCase;
+    private final UpdateCategoryUseCase updateCategoryUseCase;
 
     @GetMapping
     public List<CategoryResponse> getCategories() {
@@ -31,27 +37,21 @@ public class CategoryController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
     public CategoryResponse createCategory(@Valid @RequestBody CategoryResponse request) {
-        ProductCategory category = ProductCategory.builder()
-                .id(UUID.randomUUID())
-                .name(request.name())
-                .description(request.description())
-                .active(true)
-                .build();
-        ProductCategory saved = categoryRepository.save(category);
+        CreateCategoryCommand command = new CreateCategoryCommand(request.name(), request.description());
+        ProductCategory saved = createCategoryUseCase.execute(command);
         return new CategoryResponse(saved.getId(), saved.getName(), saved.getDescription(), saved.isActive());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
     public CategoryResponse updateCategory(@PathVariable UUID id, @Valid @RequestBody CategoryResponse request) {
-        ProductCategory category = categoryRepository.findCategoryById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found: " + id));
-        
-        category.setName(request.name());
-        category.setDescription(request.description());
-        category.setActive(request.active());
-        
-        ProductCategory saved = categoryRepository.save(category);
+        UpdateCategoryCommand command = new UpdateCategoryCommand(
+                id, 
+                request.name(), 
+                request.description(), 
+                request.active()
+        );
+        ProductCategory saved = updateCategoryUseCase.execute(command);
         return new CategoryResponse(saved.getId(), saved.getName(), saved.getDescription(), saved.isActive());
     }
 }

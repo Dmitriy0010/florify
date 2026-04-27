@@ -17,7 +17,7 @@ public class GetCustomerListInteractor implements GetCustomerListUseCase {
     private final CustomerRepository customerRepository;
 
     @Override
-    public PagedResult<Customer> execute(GetCustomerListQuery query) {
-        return customerRepository.findAll(query);
+    public PagedResult<Customer> execute(GetCustomerListQuery query, boolean includeArchived) {
+        return customerRepository.findAll(query, includeArchived);
     }
 }

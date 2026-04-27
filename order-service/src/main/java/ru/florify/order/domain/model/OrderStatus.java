@@ -29,8 +29,8 @@ public enum OrderStatus {
         return switch (this) {
             case PENDING_STOCK -> newStatus == NEW || newStatus == CANCELLED;
             case NEW -> newStatus == CONFIRMED || newStatus == CANCELLED;
-            case CONFIRMED -> newStatus == IN_PROGRESS || newStatus == CANCELLED;
-            case IN_PROGRESS -> newStatus == READY || newStatus == CANCELLED;
+            case CONFIRMED -> newStatus == IN_PROGRESS || newStatus == COMPLETED || newStatus == CANCELLED;
+            case IN_PROGRESS -> newStatus == READY || newStatus == COMPLETED || newStatus == CANCELLED;
             case READY -> newStatus == OUT_FOR_DELIVERY || newStatus == COMPLETED || newStatus == CANCELLED;
             case OUT_FOR_DELIVERY -> newStatus == COMPLETED;
             case COMPLETED, CANCELLED -> false;

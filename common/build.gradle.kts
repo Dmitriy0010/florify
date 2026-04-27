@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    `java-test-fixtures`
 }
 
 dependencies {
@@ -20,6 +21,9 @@ dependencies {
     // JSONB Persistence
     api("io.hypersistence:hypersistence-utils-hibernate-63:3.9.0")
     implementation(rootProject.libs.spring.kafka)
+
+    testFixturesApi(rootProject.libs.spring.boot.starter.test)
+    testFixturesApi(rootProject.libs.spring.security.test)
 }
 
 // Ensure it produces a standard JAR

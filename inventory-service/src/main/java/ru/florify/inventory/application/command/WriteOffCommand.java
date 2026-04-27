@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record WriteOffCommand(
         UUID productId,
+        UUID storeId,
         BigDecimal quantity,
         WriteOffReason reason,
         String comment,

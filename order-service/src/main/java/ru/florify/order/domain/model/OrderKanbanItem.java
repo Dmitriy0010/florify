@@ -12,6 +12,12 @@ public record OrderKanbanItem(
         String orderNumber,
         String status,
         BigDecimal finalAmount,
-        Instant createdAt
+        Instant createdAt,
+        String guestName,
+        String guestPhone,
+        OrderType type,
+        OrderSource source,
+        String floristName,
+        Boolean isPaid
 ) {
 }

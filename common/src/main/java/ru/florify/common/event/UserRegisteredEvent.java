@@ -8,7 +8,6 @@ import java.util.UUID;
  * Located in 'common' to maintain isolation and facilitate sharing between services.
  */
 public record UserRegisteredEvent(
-        UUID eventId,
         UUID userId,
         String email,
         String phone,
@@ -16,6 +15,6 @@ public record UserRegisteredEvent(
         Instant occurredAt
 ) {
     public static UserRegisteredEvent of(UUID userId, String email, String phone, String role, Instant now) {
-        return new UserRegisteredEvent(UUID.randomUUID(), userId, email, phone, role, now);
+        return new UserRegisteredEvent(userId, email, phone, role, now);
     }
 }

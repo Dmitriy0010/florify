@@ -7,5 +7,6 @@ public record CustomerSummaryResponse(
     String phone,
     String firstName,
     String lastName,
-    boolean active
+    boolean active,
+    Integer loyaltyPoints
 ) {}

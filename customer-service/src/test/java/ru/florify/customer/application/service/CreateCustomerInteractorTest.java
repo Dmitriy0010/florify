@@ -9,10 +9,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.florify.customer.application.command.CreateCustomerCommand;
-import ru.florify.customer.application.outbox.OutboxEvent;
 import ru.florify.customer.application.port.out.CustomerRepository;
 import ru.florify.customer.application.port.out.LoyaltyAccountRepository;
-import ru.florify.customer.application.port.out.OutboxRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import ru.florify.customer.domain.enums.CustomerSource;
 import ru.florify.customer.domain.enums.Gender;
 import ru.florify.customer.domain.enums.LoyaltyTier;
@@ -40,7 +39,7 @@ class CreateCustomerInteractorTest {
     @Mock
     private LoyaltyAccountRepository loyaltyAccountRepository;
     @Mock
-    private OutboxRepository outboxRepository;
+    private ApplicationEventPublisher eventPublisher;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-04-13T10:00:00Z"), ZoneId.of("UTC"));
 
@@ -48,7 +47,7 @@ class CreateCustomerInteractorTest {
 
     @BeforeEach
     void setUp() {
-        interactor = new CreateCustomerInteractor(customerRepository, loyaltyAccountRepository, outboxRepository, clock);
+        interactor = new CreateCustomerInteractor(customerRepository, loyaltyAccountRepository, eventPublisher, clock);
     }
 
     @Test
@@ -78,8 +77,8 @@ class CreateCustomerInteractorTest {
         assertThat(accountCaptor.getValue().getTier()).isEqualTo(LoyaltyTier.BRONZE);
         assertThat(accountCaptor.getValue().getCustomerId()).isEqualTo(result.getId());
 
-        // Verify outbox event
-        verify(outboxRepository).save(any(OutboxEvent.class));
+        // Verify event publication
+        verify(eventPublisher).publishEvent(any(ru.florify.customer.domain.event.CustomerCreatedEvent.class));
     }
 
     @Test

@@ -9,5 +9,6 @@ public record RegisterUserCommand(
         String phone,
         String firstName,
         String lastName,
-        String deviceInfo
+        String deviceInfo,
+        String role
 ) {}

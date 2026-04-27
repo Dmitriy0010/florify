@@ -11,11 +11,13 @@ public record StockReceivedEvent(
         UUID eventId,
         UUID batchId,
         UUID productId,
+        UUID storeId,
         BigDecimal quantity,
         BigDecimal unitCost,
         Instant occurredAt
 ) {
-    public static StockReceivedEvent of(UUID batchId, UUID productId, BigDecimal quantity, BigDecimal unitCost, Instant now) {
-        return new StockReceivedEvent(UUID.randomUUID(), batchId, productId, quantity, unitCost, now);
+    public static StockReceivedEvent of(UUID batchId, UUID productId, UUID storeId, BigDecimal quantity, BigDecimal unitCost, Instant now) {
+        return new StockReceivedEvent(UUID.randomUUID(), batchId, productId, storeId, quantity, unitCost, now);
     }
 }
+

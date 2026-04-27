@@ -5,5 +5,5 @@ import ru.florify.common.application.query.PagedResult;
 import ru.florify.customer.domain.model.Customer;
 
 public interface GetCustomerListUseCase {
-    PagedResult<Customer> execute(GetCustomerListQuery query);
+    PagedResult<Customer> execute(GetCustomerListQuery query, boolean includeArchived);
 }

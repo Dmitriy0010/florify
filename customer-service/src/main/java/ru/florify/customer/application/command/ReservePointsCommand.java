@@ -8,6 +8,5 @@ import java.util.UUID;
 public record ReservePointsCommand(
     UUID customerId,
     UUID orderId,
-    int pointsToReserve,
-    UUID eventId               // For idempotency
+    int pointsToReserve
 ) {}

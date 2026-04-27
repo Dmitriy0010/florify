@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":common"))
+    testImplementation(testFixtures(project(":common")))
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.security)
@@ -20,10 +21,6 @@ dependencies {
     implementation(libs.flyway.core)
     runtimeOnly(libs.flyway.postgresql)
     runtimeOnly(libs.postgresql)
-
-    // ShedLock
-    implementation("net.javacrumbs.shedlock:shedlock-spring:5.10.0")
-    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.10.0")
 
     implementation(libs.mapstruct)
     annotationProcessor(libs.mapstruct.processor)

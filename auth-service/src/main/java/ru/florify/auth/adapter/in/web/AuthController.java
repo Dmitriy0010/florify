@@ -27,7 +27,7 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Tag(name = "Auth", description = "Authentication and Authorization API")
 public class AuthController {
@@ -57,7 +57,8 @@ public class AuthController {
                 request.phone(),
                 request.firstName(),
                 request.lastName(),
-                request.deviceInfo()
+                request.deviceInfo(),
+                request.role()
         );
         AuthTokensResult result = registerUserUseCase.execute(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(authMapper.toResponse(result));

@@ -9,14 +9,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.florify.order.application.command.CreateOrderCommand;
+import ru.florify.order.application.port.out.OrderEventPublisher;
 import ru.florify.order.application.port.out.OrderNumberGenerator;
 import ru.florify.order.application.port.out.OrderRepository;
-import ru.florify.order.application.port.out.OutboxRepository;
-import ru.florify.order.application.outbox.OutboxEvent;
 import ru.florify.order.domain.event.OrderCreatedEvent;
 import ru.florify.order.domain.model.*;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -34,7 +32,7 @@ class CreateOrderInteractorTest {
     @Mock
     private OrderRepository orderRepository;
     @Mock
-    private OutboxRepository outboxRepository;
+    private OrderEventPublisher eventPublisher;
     @Mock
     private OrderNumberGenerator orderNumberGenerator;
     @Mock
@@ -52,19 +50,23 @@ class CreateOrderInteractorTest {
     }
 
     @Test
-    @DisplayName("Should successfully create order and save outbox event")
-    void shouldCreateOrderAndOutbox() {
+    @DisplayName("Should successfully create order and publish event")
+    void shouldCreateOrderAndPublishEvent() {
         // Given
         CreateOrderCommand command = new CreateOrderCommand(
                 UUID.randomUUID(),       // customerId
+                UUID.randomUUID(),       // storeId
                 null,                    // guestPhone
                 null,                    // guestName
                 List.of(),               // items
-                BigDecimal.ZERO,         // bonusPointsUsed
+                0,                       // bonusPointsUsed (int)
                 OrderType.PICKUP,        // type
                 OrderSource.WEB,         // source
                 PaymentMethod.CASH,      // paymentMethod
-                "idemp-123"              // idempotencyKey
+                "idemp-123",             // idempotencyKey
+                null,                    // deliveryAddress
+                null,                    // deliverySlotId
+                null                     // deliveryZoneId
         );
 
         when(orderNumberGenerator.next()).thenReturn("ORD-123");
@@ -81,15 +83,10 @@ class CreateOrderInteractorTest {
 
         verify(orderRepository).save(any(Order.class));
 
-        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
-        verify(outboxRepository).save(outboxCaptor.capture());
+        ArgumentCaptor<OrderCreatedEvent> payloadCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
+        verify(eventPublisher).publish(eq("orders.order.created"), eq(result.getId().toString()), payloadCaptor.capture());
 
-        OutboxEvent outboxEvent = outboxCaptor.getValue();
-        assertEquals("orders.order.created", outboxEvent.getType());
-        assertEquals(result.getId().toString(), outboxEvent.getAggregateId());
-        
-        OrderCreatedEvent payload = (OrderCreatedEvent) outboxEvent.getPayload();
+        OrderCreatedEvent payload = payloadCaptor.getValue();
         assertEquals(result.getId(), payload.orderId());
-        assertEquals("ORD-123", payload.orderNumber());
     }
 }

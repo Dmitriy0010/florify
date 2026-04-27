@@ -22,10 +22,6 @@ dependencies {
     runtimeOnly(libs.flyway.postgresql)
     runtimeOnly(libs.postgresql)
 
-    // ShedLock
-    implementation("net.javacrumbs.shedlock:shedlock-spring:5.10.0")
-    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.10.0")
-
     // Annotation Processing
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

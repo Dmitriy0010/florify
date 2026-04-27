@@ -1,1 +1,0 @@
--- Table for distributed locking (ShedLock)

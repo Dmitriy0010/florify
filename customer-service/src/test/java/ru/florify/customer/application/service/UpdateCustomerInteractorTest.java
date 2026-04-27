@@ -47,7 +47,7 @@ class UpdateCustomerInteractorTest {
         UUID customerId = UUID.randomUUID();
         UpdateCustomerCommand command = new UpdateCustomerCommand(
             customerId, "new@florify.ru", "NewName", "NewSurname",
-            null, Gender.FEMALE, List.of("vip", "new-tag"), null
+            null, Gender.FEMALE, List.of("vip", "new-tag")
         );
 
         Customer existing = Customer.builder()

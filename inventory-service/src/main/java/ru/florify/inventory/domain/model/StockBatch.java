@@ -17,6 +17,8 @@ public class StockBatch {
     private final UUID id;
 
     private final UUID productId;
+    private final UUID storeId;
+    private final UUID supplierId;
     private final BigDecimal quantityReceived;
     private final BigDecimal quantityRemaining;
     private final BigDecimal unitCost;
@@ -24,7 +26,6 @@ public class StockBatch {
     private final Instant expiresAt;  // может быть null для неограниченных товаров
     private final BatchStatus status;
     private final String sourceDocumentId;
-    private final Integer version;
 
     public boolean isExpired(Instant now) {
         return expiresAt != null && now.isAfter(expiresAt);

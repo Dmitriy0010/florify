@@ -28,6 +28,7 @@ public class Order {
     private List<OrderItem> items;
     private BigDecimal totalAmount;
     private BigDecimal discountAmount;
+    private BigDecimal totalCogs;
     private int bonusPointsUsed;
     private BigDecimal finalAmount;
     private OrderType type;
@@ -37,7 +38,11 @@ public class Order {
     private Instant createdAt;
     private Instant updatedAt;
     private UUID floristId;
-    private Integer version;
+    private UUID storeId;
+    private String deliveryAddress;
+    private UUID deliverySlotId;
+    private UUID deliveryZoneId;
+    private Payment currentPayment;
 
     // Фабричный метод для создания нового заказа
     public static Order createNew(
@@ -51,6 +56,10 @@ public class Order {
             OrderType type,
             OrderSource source,
             PaymentMethod paymentMethod,
+            String deliveryAddress,
+            UUID deliverySlotId,
+            UUID deliveryZoneId,
+            UUID storeId,
             Instant now
     ) {
         BigDecimal total = items.stream()
@@ -59,6 +68,8 @@ public class Order {
 
         BigDecimal finalAmount = total.subtract(BigDecimal.valueOf(bonusPointsUsed));
 
+        OrderStatus initialStatus = source == OrderSource.POS ? OrderStatus.CONFIRMED : OrderStatus.PENDING_STOCK;
+
         return Order.builder()
                 .id(UUID.randomUUID())
                 .orderNumber(orderNumber)
@@ -66,7 +77,7 @@ public class Order {
                 .customerId(customerId)
                 .guestPhone(guestPhone)
                 .guestName(guestName)
-                .status(OrderStatus.PENDING_STOCK)
+                .status(initialStatus)
                 .items(items)
                 .totalAmount(total)
                 .discountAmount(BigDecimal.ZERO)
@@ -75,10 +86,13 @@ public class Order {
                 .type(type)
                 .source(source)
                 .paymentMethod(paymentMethod)
+                .deliveryAddress(deliveryAddress)
+                .deliverySlotId(deliverySlotId)
+                .deliveryZoneId(deliveryZoneId)
+                .storeId(storeId)
                 .isPaid(false)
                 .createdAt(now)
                 .updatedAt(now)
-                .version(0)
                 .build();
     }
 
@@ -115,6 +129,20 @@ public class Order {
         return this.transitionToStatus(OrderStatus.COMPLETED, updatedAt)
                 .toBuilder()
                 .floristId(floristId)
+                .build();
+    }
+
+    public Order associatePayment(Payment payment, Instant updatedAt) {
+        return this.toBuilder()
+                .currentPayment(payment)
+                .updatedAt(updatedAt)
+                .build();
+    }
+
+    public Order markAsPaid(Instant updatedAt) {
+        return this.toBuilder()
+                .isPaid(true)
+                .updatedAt(updatedAt)
                 .build();
     }
 }

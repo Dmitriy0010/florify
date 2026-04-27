@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":common"))
+    testImplementation(testFixtures(project(":common")))
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.security)
@@ -12,6 +13,7 @@ dependencies {
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.data.redis)
+    implementation(libs.spring.boot.starter.websocket)
     implementation(libs.spring.kafka)
     implementation(libs.springdoc.openapi)
     implementation(libs.spring.retry)
@@ -21,10 +23,6 @@ dependencies {
     runtimeOnly(libs.flyway.postgresql)
     runtimeOnly(libs.postgresql)
 
-    // ShedLock
-    implementation("net.javacrumbs.shedlock:shedlock-spring:5.10.0")
-    implementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.10.0")
-
     // Annotation Processing
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
@@ -33,7 +31,8 @@ dependencies {
 
     // Tests
     testImplementation(libs.spring.boot.starter.test)
-    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation(libs.spring.security.test)
+    testImplementation(libs.h2)
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.testcontainers.postgres)
     testImplementation("org.testcontainers:testcontainers")

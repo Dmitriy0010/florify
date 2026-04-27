@@ -16,7 +16,6 @@ public record ProductResponse(
     String imageUrl,
     int defaultShelfLifeDays,
     boolean active,
-    int version,
     Instant createdAt,
     Instant updatedAt
 ) {}

@@ -1,9 +1,10 @@
 package ru.florify.customer.domain.exception;
 
+import ru.florify.common.exception.NotFoundException;
 import java.util.UUID;
 
-public class CustomerNotFoundException extends RuntimeException {
+public class CustomerNotFoundException extends NotFoundException {
     public CustomerNotFoundException(UUID id) {
-        super("Customer not found with id: " + id);
+        super("Customer", id);
     }
 }

@@ -2,6 +2,7 @@ package ru.florify.inventory.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -22,6 +23,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -33,6 +35,7 @@ public class WriteOffStockInteractor implements WriteOffStockUseCase {
     private final StockBatchRepository stockBatchRepository;
     private final StockTransactionPort transactionPort;
     private final EventPublisher eventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
     private final Clock clock;
 
     @Override
@@ -42,17 +45,30 @@ public class WriteOffStockInteractor implements WriteOffStockUseCase {
             retryFor = ObjectOptimisticLockingFailureException.class,
             backoff = @Backoff(delay = 100, multiplier = 2)
     )
-    public void execute(WriteOffCommand command) {
-        log.info("Processing FIFO write-off for productId: {}, qty: {}", command.productId(), command.quantity());
-
-        // 1. Idempotency Check
-        if (transactionPort.existsBySourceDocument(command.sourceDocumentId())) {
-            log.warn("Idempotency skip: sourceDocument {} already processed", command.sourceDocumentId());
-            return;
+    public BigDecimal execute(WriteOffCommand command) {
+        String sourceDocId = command.sourceDocumentId();
+        if (sourceDocId == null || sourceDocId.isBlank()) {
+            sourceDocId = "WO-" + java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")
+                    .withZone(java.time.ZoneId.systemDefault())
+                    .format(clock.instant()) + "-" + UUID.randomUUID().toString().substring(0, 4);
         }
 
-        // 2. FIFO: Fetch available batches sorted by arrival time
-        List<StockBatch> batches = stockBatchRepository.findAvailableByProductIdOrderByReceivedAtAsc(command.productId());
+        log.info("Processing FIFO write-off for productId: {} in store: {}, qty: {}, doc: {}", 
+                command.productId(), command.storeId(), command.quantity(), sourceDocId);
+
+        // 1. Idempotency Check - scoped to sourceDocument + productId
+        // This allows one document (like a daily report) to contain multiple products
+        if (transactionPort.existsBySourceDocumentAndProductId(sourceDocId, command.productId())) {
+            log.warn("Idempotency skip: sourceDocument {} for product {} already processed", 
+                    sourceDocId, command.productId());
+            return BigDecimal.ZERO; 
+        }
+
+        // 2. FIFO: Fetch available batches within the SPECIFIC STORE sorted by arrival time
+        List<StockBatch> batches = stockBatchRepository.findAvailableByProductIdAndStoreIdOrderByReceivedAtAsc(
+                command.productId(), 
+                command.storeId()
+        );
 
         BigDecimal remainingToWriteOff = command.quantity();
         List<StockBatch> updatedBatches = new ArrayList<>();
@@ -71,33 +87,67 @@ public class WriteOffStockInteractor implements WriteOffStockUseCase {
         }
 
         if (remainingToWriteOff.compareTo(BigDecimal.ZERO) > 0) {
-            throw new InsufficientStockException("Not enough stock for FIFO write-off: " + command.productId());
+            throw new InsufficientStockException("Not enough stock for FIFO write-off in store %s for product %s"
+                    .formatted(command.storeId(), command.productId()));
         }
 
-        // 3. Batch Save! (Atomic and optimized)
+        // 3. Batch Save
         stockBatchRepository.saveAll(updatedBatches);
 
-        // 4. Record Transaction (Audit)
-        StockBalance balance = balanceLookup.findByProductId(command.productId())
-                .orElseThrow(() -> new NotFoundException("ProductBalance", command.productId()));
+        // 4. Record Transaction (Audit) - includes storeId correctly via command/context
+        StockBalance balance = balanceLookup.findByProductIdAndStoreId(command.productId(), command.storeId())
+                .orElseThrow(() -> new NotFoundException("StockBalance", 
+                        command.productId() + " in store " + command.storeId()));
         
         StockTransaction transaction = StockTransaction.forWriteOff(
                 command.productId(),
+                command.storeId(),
                 command.quantity(),
-                balance.getAverageCost(), // Carry forward WAC for reporting if needed
+                balance.getAverageCost(),
                 command.reason(),
                 command.comment(),
-                command.sourceDocumentId(),
+                sourceDocId,
                 command.performerId(),
                 clock.instant()
         );
+        // Ensure storeId is handled in transactions (domain model check if needed)
         transactionPort.save(transaction);
 
-        // 5. Update Aggregate StockBalance
+        // 5. Update Aggregate StockBalance (Branch specific)
         StockBalance updatedBalance = balance.writeOff(command.quantity());
         balancePersist.save(updatedBalance);
 
         // 6. Publish Event
-        eventPublisher.publish(StockWrittenOffEvent.from(transaction));
+        StockWrittenOffEvent domainEvent = StockWrittenOffEvent.from(transaction);
+        eventPublisher.publish(domainEvent);
+        
+        // Spring Event для finance-service
+        applicationEventPublisher.publishEvent(ru.florify.common.event.StockWrittenOffSpringEvent.of(
+                domainEvent.sourceDocumentId() != null 
+                        ? (domainEvent.sourceDocumentId().contains(":") && domainEvent.sourceDocumentId().split(":")[0].equals("order") 
+                                ? java.util.UUID.fromString(domainEvent.sourceDocumentId().split(":")[1]) 
+                                : transaction.id()) 
+                        : transaction.id(),
+                transaction.productId(),
+                transaction.storeId(),
+                transaction.totalValue(),
+                domainEvent.reason(),
+                clock.instant()
+        ));
+
+        // Фиксация финансового результата инвентаризации (недостача)
+        if (sourceDocId.contains("INV-LOG") || sourceDocId.contains("AUDIT")) {
+            applicationEventPublisher.publishEvent(new ru.florify.common.event.StockAdjustmentSpringEvent(
+                    command.productId(),
+                    command.storeId(),
+                    command.quantity(),
+                    transaction.totalValue(), // сумма в закупочных ценах
+                    sourceDocId,
+                    ru.florify.common.event.StockAdjustmentSpringEvent.AdjustmentType.LOSS,
+                    clock.instant()
+            ));
+        }
+
+        return transaction.totalValue();
     }
 }

@@ -7,6 +7,7 @@ import java.util.UUID;
 public record StockTransaction(
         UUID id,
         UUID productId,
+        UUID storeId,
         TransactionType type,
         BigDecimal quantity,
         BigDecimal costBasis,
@@ -19,6 +20,7 @@ public record StockTransaction(
 ) {
     public static StockTransaction forInbound(
             UUID productId,
+            UUID storeId,
             BigDecimal quantity,
             BigDecimal price,
             String sourceDocumentId,
@@ -28,6 +30,7 @@ public record StockTransaction(
         return new StockTransaction(
                 UUID.randomUUID(),
                 productId,
+                storeId,
                 TransactionType.INBOUND,
                 quantity,
                 price,
@@ -42,6 +45,7 @@ public record StockTransaction(
 
     public static StockTransaction forWriteOff(
             UUID productId,
+            UUID storeId,
             BigDecimal quantity,
             BigDecimal currentAverageCost,
             WriteOffReason reason,
@@ -53,6 +57,7 @@ public record StockTransaction(
         return new StockTransaction(
                 UUID.randomUUID(),
                 productId,
+                storeId,
                 TransactionType.WRITE_OFF,
                 quantity,
                 currentAverageCost,
@@ -65,3 +70,4 @@ public record StockTransaction(
         );
     }
 }
+

@@ -13,7 +13,11 @@ import ru.florify.inventory.application.port.in.ReceiveStockUseCase;
 import ru.florify.inventory.application.port.out.*;
 import ru.florify.inventory.domain.exception.InactiveProductException;
 import ru.florify.inventory.domain.event.StockReceivedEvent;
-import ru.florify.inventory.domain.model.*;
+import ru.florify.inventory.domain.model.BatchStatus;
+import ru.florify.inventory.domain.model.CatalogProduct;
+import ru.florify.inventory.domain.model.StockBalance;
+import ru.florify.inventory.domain.model.StockBatch;
+import ru.florify.inventory.domain.model.StockTransaction;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -30,6 +34,7 @@ public class ReceiveStockInteractor implements ReceiveStockUseCase {
     private final StockBatchRepository stockBatchRepository;
     private final StockTransactionPort transactionPort;
     private final EventPublisher eventPublisher;
+    private final org.springframework.context.ApplicationEventPublisher springEventPublisher;
     private final Clock clock;
 
     @Override
@@ -40,20 +45,29 @@ public class ReceiveStockInteractor implements ReceiveStockUseCase {
             backoff = @Backoff(delay = 100, multiplier = 2)
     )
     public void execute(ReceiveStockCommand command) {
-        log.info("Receiving FIFO stock for productId: {}, qty: {}", command.productId(), command.quantity());
+        String sourceDocId = command.sourceDocumentId();
+        if (sourceDocId == null || sourceDocId.isBlank() || sourceDocId.equals("null")) {
+            sourceDocId = "REC-" + java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")
+                    .withZone(java.time.ZoneId.systemDefault())
+                    .format(clock.instant()) + "-" + UUID.randomUUID().toString().substring(0, 4);
+        }
 
-        // 1. Idempotency Check
-        if (transactionPort.existsBySourceDocument(command.sourceDocumentId())) {
-            log.warn("Idempotency skip: sourceDocument {} already processed", command.sourceDocumentId());
+        log.info("Receiving FIFO stock for productId: {}, qty: {}, storeId: {}, doc: {}", 
+                command.productId(), command.quantity(), command.storeId(), sourceDocId);
+
+        // 1. Idempotency Check - scoped to sourceDocument + productId
+        if (transactionPort.existsBySourceDocumentAndProductId(sourceDocId, command.productId())) {
+            log.warn("Idempotency skip: sourceDocument {} for product {} already processed", 
+                    sourceDocId, command.productId());
             return;
         }
 
         // 2. Fetch Product
-        ProductSnapshot product = productLookup.findById(command.productId())
-                .orElseThrow(() -> new NotFoundException("ProductSnapshot", command.productId()));
+        CatalogProduct product = productLookup.findById(command.productId())
+                .orElseThrow(() -> new NotFoundException("Product", command.productId()));
 
         if (!product.isActive()) {
-            throw new InactiveProductException("Cannot receive stock for inactive product: " + command.productId());
+            log.warn("Receiving stock for inactive product: {}. Proceeding as requested.", command.productId());
         }
 
         Instant now = Instant.now(clock);
@@ -62,21 +76,22 @@ public class ReceiveStockInteractor implements ReceiveStockUseCase {
         StockBatch newBatch = StockBatch.builder()
                 .id(UUID.randomUUID())
                 .productId(command.productId())
+                .storeId(command.storeId())
+                .supplierId(command.supplierId())
                 .quantityReceived(command.quantity())
                 .quantityRemaining(command.quantity())
                 .unitCost(command.purchasePrice())
                 .receivedAt(now)
                 .expiresAt(command.expiresAt())
                 .status(BatchStatus.AVAILABLE)
-                .sourceDocumentId(command.sourceDocumentId())
-                .version(0)
+                .sourceDocumentId(sourceDocId)
                 .build();
         
         stockBatchRepository.save(newBatch);
 
         // 4. Update Aggregate StockBalance
-        StockBalance balance = balanceLookup.findByProductId(command.productId())
-                .orElseGet(() -> StockBalance.createEmpty(command.productId()));
+        StockBalance balance = balanceLookup.findByProductIdAndStoreId(command.productId(), command.storeId())
+                .orElseGet(() -> StockBalance.createEmpty(command.productId(), command.storeId()));
 
         StockBalance updatedBalance = balance.receive(command.quantity(), command.purchasePrice());
         balancePersist.save(updatedBalance);
@@ -84,21 +99,36 @@ public class ReceiveStockInteractor implements ReceiveStockUseCase {
         // 5. Record Transaction (Audit)
         StockTransaction transaction = StockTransaction.forInbound(
                 command.productId(),
+                command.storeId(),
                 command.quantity(),
                 command.purchasePrice(),
-                command.sourceDocumentId(),
+                sourceDocId,
                 command.performerId(),
                 now
         );
         transactionPort.save(transaction);
 
-        // 6. Publish Event (Bug fix #3)
+        // 6. Publish Kafka Event
         eventPublisher.publish(StockReceivedEvent.of(
                 newBatch.getId(), 
                 command.productId(), 
+                command.storeId(),
                 command.quantity(), 
                 command.purchasePrice(), 
                 now
         ));
+
+        // 7. Publish Spring Event for finance (only if it's an inventory audit surplus)
+        if (sourceDocId.contains("INV-AUDIT")) {
+            springEventPublisher.publishEvent(new ru.florify.common.event.StockAdjustmentSpringEvent(
+                    command.productId(),
+                    command.storeId(),
+                    command.quantity(),
+                    command.purchasePrice().multiply(command.quantity()),
+                    sourceDocId,
+                    ru.florify.common.event.StockAdjustmentSpringEvent.AdjustmentType.SURPLUS,
+                    now
+            ));
+        }
     }
 }

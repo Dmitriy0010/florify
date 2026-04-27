@@ -60,6 +60,15 @@ public class RegisterUserInteractor implements RegisterUserUseCase {
 
         String hashedPassword = passwordHasher.hash(command.password());
 
+        Role userRole = Role.CUSTOMER;
+        if (command.role() != null) {
+            try {
+                userRole = Role.valueOf(command.role().toUpperCase());
+            } catch (Exception e) {
+                log.warn("Invalid role provided: {}. Defaulting to CUSTOMER", command.role());
+            }
+        }
+
         User newUser = User.builder()
                 .id(UUID.randomUUID())
                 .email(command.email())
@@ -67,7 +76,7 @@ public class RegisterUserInteractor implements RegisterUserUseCase {
                 .firstName(command.firstName())
                 .lastName(command.lastName())
                 .passwordHash(hashedPassword)
-                .roles(Set.of(Role.CUSTOMER))
+                .roles(Set.of(userRole))
                 .active(true)
                 .createdAt(now)
                 .build();
@@ -94,7 +103,7 @@ public class RegisterUserInteractor implements RegisterUserUseCase {
         refreshTokenRepository.save(refreshTokenModel);
 
         // 3. Publish Event
-        AuthEventPublisher.publish(UserRegisteredEvent.of(savedUser.id(), savedUser.email(), command.phone(), Role.CUSTOMER.name(), now));
+        AuthEventPublisher.publish(UserRegisteredEvent.of(savedUser.id(), savedUser.email(), command.phone(), userRole.name(), now));
 
         return new AuthTokensResult(
                 accessToken,

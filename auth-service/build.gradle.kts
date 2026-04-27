@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":common"))
+    testImplementation(testFixtures(project(":common")))
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.security)
@@ -33,6 +34,8 @@ dependencies {
 
     // Testing
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.security.test)
+    testImplementation(libs.h2)
     testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.testcontainers.postgres)
     testImplementation(libs.testcontainers.junit.jupiter)

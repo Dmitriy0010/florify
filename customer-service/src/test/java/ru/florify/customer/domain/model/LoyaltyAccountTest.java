@@ -7,7 +7,6 @@ import ru.florify.customer.domain.exception.InsufficientPointsException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,22 +77,17 @@ class LoyaltyAccountTest {
     }
 
     @Test
-    @DisplayName("Should upgrade tier based on tierRank from config")
+    @DisplayName("Should upgrade tier based on built-in thresholds")
     void shouldUpgradeTier() {
         // given
         LoyaltyAccount account = createBaseAccount()
             .withTier(LoyaltyTier.BRONZE)
-            .withTotalSpent(new BigDecimal("5000.00"));
+            .withTotalSpent(new BigDecimal("15000.00")); // Silver > 10000
         
-        List<LoyaltyTierConfig> configs = List.of(
-            LoyaltyTierConfig.builder().tier(LoyaltyTier.BRONZE).tierRank(1).minSpend(BigDecimal.ZERO).build(),
-            LoyaltyTierConfig.builder().tier(LoyaltyTier.SILVER).tierRank(2).minSpend(new BigDecimal("3000.00")).build(),
-            LoyaltyTierConfig.builder().tier(LoyaltyTier.GOLD).tierRank(3).minSpend(new BigDecimal("10000.00")).build()
-        );
         Instant now = Instant.now();
 
         // when
-        LoyaltyAccount result = account.upgradeTierIfNeeded(configs, now);
+        LoyaltyAccount result = account.upgradeTierIfNeeded(now);
 
         // then
         assertThat(result.getTier()).isEqualTo(LoyaltyTier.SILVER);
@@ -101,21 +95,15 @@ class LoyaltyAccountTest {
     }
 
     @Test
-    @DisplayName("Should not downgrade tier if spend drops (though not possible in this model)")
+    @DisplayName("Should not downgrade tier if spend drops")
     void shouldNotDowngradeTier() {
         // given
         LoyaltyAccount account = createBaseAccount()
             .withTier(LoyaltyTier.GOLD)
             .withTotalSpent(new BigDecimal("100.00")); // Low spend but already Gold
         
-        List<LoyaltyTierConfig> configs = List.of(
-            LoyaltyTierConfig.builder().tier(LoyaltyTier.BRONZE).tierRank(1).minSpend(BigDecimal.ZERO).build(),
-            LoyaltyTierConfig.builder().tier(LoyaltyTier.SILVER).tierRank(2).minSpend(new BigDecimal("3000.00")).build(),
-            LoyaltyTierConfig.builder().tier(LoyaltyTier.GOLD).tierRank(3).minSpend(new BigDecimal("10000.00")).build()
-        );
-
         // when
-        LoyaltyAccount result = account.upgradeTierIfNeeded(configs, Instant.now());
+        LoyaltyAccount result = account.upgradeTierIfNeeded(Instant.now());
 
         // then
         assertThat(result.getTier()).isEqualTo(LoyaltyTier.GOLD);

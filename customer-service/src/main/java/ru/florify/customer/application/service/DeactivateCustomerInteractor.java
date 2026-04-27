@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.florify.customer.application.port.in.DeactivateCustomerUseCase;
+import ru.florify.customer.application.port.out.CustomerCachePort;
 import ru.florify.customer.application.port.out.CustomerRepository;
 import ru.florify.customer.domain.exception.CustomerNotFoundException;
 import ru.florify.customer.domain.model.Customer;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class DeactivateCustomerInteractor implements DeactivateCustomerUseCase {
 
     private final CustomerRepository customerRepository;
+    private final CustomerCachePort customerCachePort;
     private final Clock clock;
 
     @Override
@@ -27,5 +29,6 @@ public class DeactivateCustomerInteractor implements DeactivateCustomerUseCase {
         
         Customer deactivated = customer.deactivate(Instant.now(clock));
         customerRepository.save(deactivated);
+        customerCachePort.evict(id);
     }
 }

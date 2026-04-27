@@ -10,11 +10,13 @@ import java.util.UUID;
  */
 public record OrderConfirmedEvent(
         UUID orderId,
+        UUID storeId,
         UUID performerId,
         List<OrderItem> items
 ) {
     public record OrderItem(
             UUID productId,
-            BigDecimal quantity
+            BigDecimal quantity,
+            BigDecimal price
     ) {}
 }

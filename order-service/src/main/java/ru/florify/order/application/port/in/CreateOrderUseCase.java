@@ -5,7 +5,9 @@ import ru.florify.order.application.command.CreateOrderCommand;
 import ru.florify.order.domain.model.Order;
 
 /**
- * Input port for creating a new order.
+ * Use case for orchestrating new order creation.
+ * Coordinates input validation, inventory reservation, price calculation,
+ * and initial order state persistence.
  */
 public interface CreateOrderUseCase extends UseCase<CreateOrderCommand, Order> {
 }

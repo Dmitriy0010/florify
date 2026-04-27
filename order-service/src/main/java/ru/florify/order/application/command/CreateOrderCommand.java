@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public record CreateOrderCommand(
         UUID customerId,
+        UUID storeId,
         String guestPhone,
         String guestName,
         List<OrderItem> items,
@@ -18,6 +19,9 @@ public record CreateOrderCommand(
         OrderType type,
         OrderSource source,
         PaymentMethod paymentMethod,
-        String idempotencyKey
+        String idempotencyKey,
+        String deliveryAddress,
+        UUID deliverySlotId,
+        UUID deliveryZoneId
 ) {
 }

@@ -11,6 +11,5 @@ public record ConfirmPointsCommand(
     UUID orderId,
     int pointsToDeduct,         // Equal to bonusPointsUsed in order
     BigDecimal purchaseAmount,  // For calculating earned points and tier upgrade
-    UUID floristId,             // For potential future KPIs
-    UUID eventId                // For idempotency
+    UUID floristId              // For potential future KPIs
 ) {}

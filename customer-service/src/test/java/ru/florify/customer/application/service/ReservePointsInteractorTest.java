@@ -7,11 +7,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.florify.customer.application.command.ReservePointsCommand;
-import ru.florify.customer.application.outbox.OutboxEvent;
-import ru.florify.customer.application.port.out.IdempotencyPort;
 import ru.florify.customer.application.port.out.LoyaltyAccountRepository;
 import ru.florify.customer.application.port.out.LoyaltyTransactionRepository;
-import ru.florify.customer.application.port.out.OutboxRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import ru.florify.customer.domain.model.LoyaltyAccount;
 import ru.florify.customer.domain.model.LoyaltyTransaction;
 
@@ -31,9 +29,7 @@ class ReservePointsInteractorTest {
     @Mock
     private LoyaltyTransactionRepository transactionRepository;
     @Mock
-    private OutboxRepository outboxRepository;
-    @Mock
-    private IdempotencyPort idempotencyPort;
+    private ApplicationEventPublisher eventPublisher;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-04-13T10:00:00Z"), ZoneId.of("UTC"));
     private ReservePointsInteractor interactor;
@@ -41,19 +37,16 @@ class ReservePointsInteractorTest {
     @BeforeEach
     void setUp() {
         interactor = new ReservePointsInteractor(
-            loyaltyAccountRepository, transactionRepository, outboxRepository, idempotencyPort, clock);
+            loyaltyAccountRepository, transactionRepository, eventPublisher, clock);
     }
 
     @Test
-    @DisplayName("Should successfully reserve points and save to outbox")
+    @DisplayName("Should successfully reserve points and publish event")
     void shouldReservePointsSuccessfully() {
         // given
-        UUID eventId = UUID.randomUUID();
         UUID customerId = UUID.randomUUID();
         UUID orderId = UUID.randomUUID();
-        ReservePointsCommand command = new ReservePointsCommand(customerId, orderId, 50, eventId);
-
-        when(idempotencyPort.isProcessed(eventId, "reserve-points-consumer")).thenReturn(false);
+        ReservePointsCommand command = new ReservePointsCommand(customerId, orderId, 50);
         
         LoyaltyAccount account = mock(LoyaltyAccount.class);
         when(loyaltyAccountRepository.findByCustomerId(customerId)).thenReturn(Optional.of(account));
@@ -65,22 +58,8 @@ class ReservePointsInteractorTest {
         // then
         verify(loyaltyAccountRepository).save(any(LoyaltyAccount.class));
         verify(transactionRepository).save(any(LoyaltyTransaction.class));
-        verify(outboxRepository).save(any(OutboxEvent.class));
-        verify(idempotencyPort).saveProcessedEvent(eventId, "reserve-points-consumer");
+        verify(eventPublisher).publishEvent(any(ru.florify.common.event.PointsReservedEvent.class));
     }
 
-    @Test
-    @DisplayName("Should skip processing if event is already processed")
-    void shouldSkipIfAlreadyProcessed() {
-        // given
-        UUID eventId = UUID.randomUUID();
-        ReservePointsCommand command = new ReservePointsCommand(UUID.randomUUID(), UUID.randomUUID(), 50, eventId);
-        when(idempotencyPort.isProcessed(eventId, "reserve-points-consumer")).thenReturn(true);
-
-        // when
-        interactor.execute(command);
-
-        // then
-        verifyNoInteractions(loyaltyAccountRepository, transactionRepository, outboxRepository);
-    }
+    // Idempotency check removed from interactor as it's now handled by DB constraints or higher layer
 }
