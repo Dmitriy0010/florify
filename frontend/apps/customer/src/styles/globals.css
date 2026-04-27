@@ -1,0 +1,211 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Фоны */
+  --color-bg-canvas:    #FDFCFA;  /* Ещё теплее для B2C — кремовый оттенок */
+  --color-bg-surface:   #FFFFFF;  /* Карточки товаров */
+  --color-bg-sunken:    #F5F3F0;  /* Footer, secondary sections */
+  --color-bg-overlay:   rgba(0, 0, 0, 0.4);  /* Модальные окна */
+
+  /* Границы */
+  --color-border:       #E8E6E1;
+  --color-border-hover: #D1CFC9;
+  --color-border-focus: #3D7A5E;  /* Brand-цвет для фокуса */
+
+  /* Текст */
+  --color-text-primary:   #1F1E1B;  /* Чуть темнее для контраста */
+  --color-text-secondary: #6B6A66;
+  --color-text-tertiary:  #A09F9B;
+  --color-text-inverse:   #FFFFFF;
+  --color-text-link:      #3D7A5E;  /* Ссылки в brand-цвете */
+  --color-text-link-hover:#2F6249;
+
+  /* ═══════════════════════════════════════════════════════════
+     BRAND ЦВЕТ (главный акцент)
+     ══════════════════════════════════════════════════════════ */
+
+  /* Основной зелёный — для кнопок, акцентов */
+  --color-brand:          #3D7A5E;
+  --color-brand-hover:    #2F6249;
+  --color-brand-active:   #25503A;
+  --color-brand-light:    #EAF4EF;  /* Для hover состояний карточек */
+  --color-brand-soft:     #D4E8DD;  /* Для badges "Новинка" */
+
+  /* ═══════════════════════════════════════════════════════════
+     ДОПОЛНИТЕЛЬНЫЕ АКЦЕНТЫ (специфичные для Customer Portal)
+     ══════════════════════════════════════════════════════════ */
+
+  /* Акцент 2 — Тёплый розовый (для эмоциональных моментов) */
+  --color-accent-rose:       #E8A5A5;  /* Цветочный акцент */
+  --color-accent-rose-light: #F9EDED;  /* Фон для "специальных предложений" */
+
+  /* Акцент 3 — Золотой (для VIP, премиум) */
+  --color-accent-gold:       #D4A574;
+  --color-accent-gold-light: #F8F0E6;
+
+  /* ═══════════════════════════════════════════════════════════
+     СТАТУСЫ ЗАКАЗА (для отслеживания)
+     ══════════════════════════════════════════════════════════ */
+
+  --color-status-new:         #3B82F6;  /* Новый */
+  --color-status-new-bg:      #EFF6FF;
+  --color-status-processing:  #F59E0B;  /* В обработке */
+  --color-status-processing-bg:#FFFBEB;
+  --color-status-ready:       #10B981;  /* Готов к доставке */
+  --color-status-ready-bg:    #ECFDF5;
+  --color-status-delivered:   #6B7280;  /* Доставлен */
+  --color-status-delivered-bg:#F9FAFB;
+  --color-status-cancelled:   #EF4444;  /* Отменён */
+  --color-status-cancelled-bg:#FEF2F2;
+
+  /* ═══════════════════════════════════════════════════════════
+     СИСТЕМНЫЕ ЦВЕТА
+     ══════════════════════════════════════════════════════════ */
+
+  --color-success:  #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-warning:  #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-error:    #EF4444;
+  --color-error-bg:   #FEF2F2;
+  --color-info:     #3B82F6;
+  --color-info-bg:    #EFF6FF;
+
+  /* ═══════════════════════════════════════════════════════════
+     БОНУСНАЯ СИСТЕМА
+     ══════════════════════════════════════════════════════════ */
+
+  --color-loyalty-bronze:   #CD7F32;
+  --color-loyalty-silver:   #C0C0C0;
+  --color-loyalty-gold:     #FFD700;
+  --color-loyalty-platinum: #E5E4E2;
+
+  /* ═══════════════════════════════════════════════════════════
+     ТЕНИ И ЭФФЕКТЫ
+     ══════════════════════════════════════════════════════════ */
+
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md:  0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg:  0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-xl:  0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-hover: 0 4px 16px rgba(61, 122, 94, 0.15);  /* Brand-тень при hover */
+
+  /* Радиусы скругления */
+  --radius-sm:   6px;   /* Badges, pills */
+  --radius-md:   10px;  /* Карточки товаров, кнопки */
+  --radius-lg:   14px;  /* Модальные окна */
+  --radius-xl:   20px;  /* Hero-секции */
+  --radius-full: 9999px; /* Круглые кнопки */
+
+  /* Переходы */
+  --transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base:   250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow:   350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    @apply font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+  .theme {
+    --font-heading:    var(--font-sans);
+    --font-sans:    'Geist Variable', sans-serif;
+  }
+  :root {
+    --background:    oklch(1 0 0);
+    --foreground:    oklch(0.145 0 0);
+    --card:    oklch(1 0 0);
+    --card-foreground:    oklch(0.145 0 0);
+    --popover:    oklch(1 0 0);
+    --popover-foreground:    oklch(0.145 0 0);
+    --primary:    oklch(0.205 0 0);
+    --primary-foreground:    oklch(0.985 0 0);
+    --secondary:    oklch(0.97 0 0);
+    --secondary-foreground:    oklch(0.205 0 0);
+    --muted:    oklch(0.97 0 0);
+    --muted-foreground:    oklch(0.556 0 0);
+    --accent:    oklch(0.97 0 0);
+    --accent-foreground:    oklch(0.205 0 0);
+    --destructive:    oklch(0.577 0.245 27.325);
+    --border:    oklch(0.922 0 0);
+    --input:    oklch(0.922 0 0);
+    --ring:    oklch(0.708 0 0);
+    --chart-1:    oklch(0.87 0 0);
+    --chart-2:    oklch(0.556 0 0);
+    --chart-3:    oklch(0.439 0 0);
+    --chart-4:    oklch(0.371 0 0);
+    --chart-5:    oklch(0.269 0 0);
+    --radius:    0.625rem;
+    --sidebar:    oklch(0.985 0 0);
+    --sidebar-foreground:    oklch(0.145 0 0);
+    --sidebar-primary:    oklch(0.205 0 0);
+    --sidebar-primary-foreground:    oklch(0.985 0 0);
+    --sidebar-accent:    oklch(0.97 0 0);
+    --sidebar-accent-foreground:    oklch(0.205 0 0);
+    --sidebar-border:    oklch(0.922 0 0);
+    --sidebar-ring:    oklch(0.708 0 0);
+  }
+  .dark {
+    --background:    oklch(0.145 0 0);
+    --foreground:    oklch(0.985 0 0);
+    --card:    oklch(0.205 0 0);
+    --card-foreground:    oklch(0.985 0 0);
+    --popover:    oklch(0.205 0 0);
+    --popover-foreground:    oklch(0.985 0 0);
+    --primary:    oklch(0.922 0 0);
+    --primary-foreground:    oklch(0.205 0 0);
+    --secondary:    oklch(0.269 0 0);
+    --secondary-foreground:    oklch(0.985 0 0);
+    --muted:    oklch(0.269 0 0);
+    --muted-foreground:    oklch(0.708 0 0);
+    --accent:    oklch(0.269 0 0);
+    --accent-foreground:    oklch(0.985 0 0);
+    --destructive:    oklch(0.704 0.191 22.216);
+    --border:    oklch(1 0 0 / 10%);
+    --input:    oklch(1 0 0 / 15%);
+    --ring:    oklch(0.556 0 0);
+    --chart-1:    oklch(0.87 0 0);
+    --chart-2:    oklch(0.556 0 0);
+    --chart-3:    oklch(0.439 0 0);
+    --chart-4:    oklch(0.371 0 0);
+    --chart-5:    oklch(0.269 0 0);
+    --sidebar:    oklch(0.205 0 0);
+    --sidebar-foreground:    oklch(0.985 0 0);
+    --sidebar-primary:    oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground:    oklch(0.985 0 0);
+    --sidebar-accent:    oklch(0.269 0 0);
+    --sidebar-accent-foreground:    oklch(0.985 0 0);
+    --sidebar-border:    oklch(1 0 0 / 10%);
+    --sidebar-ring:    oklch(0.556 0 0);
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  /* Утилитарные классы */
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .card {
+    @apply bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-md;
+  }
+
+  .card-hover {
+    @apply transition-all duration-[var(--transition-base)];
+    @apply hover:shadow-hover hover:scale-[1.02];
+  }
+}
