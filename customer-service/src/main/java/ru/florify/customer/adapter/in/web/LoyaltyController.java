@@ -80,7 +80,7 @@ public class LoyaltyController {
     }
 
     @GetMapping("/accounts/{customerId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'CASHIER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'CASHIER', 'FLORIST')")
     public LoyaltyAccountResponse getAccount(@PathVariable UUID customerId) {
         LoyaltyAccount account = loyaltyAccountRepository.findByCustomerId(customerId)
                 .orElseThrow(() -> new CustomerNotFoundException(customerId));
@@ -88,7 +88,7 @@ public class LoyaltyController {
     }
 
     @GetMapping("/accounts/{customerId}/transactions")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'CASHIER') or @securityService.isOwner(#customerId)")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'CASHIER', 'FLORIST') or @securityService.isOwner(#customerId)")
     public List<LoyaltyTransactionResponse> getTransactions(@PathVariable UUID customerId) {
         LoyaltyAccount account = loyaltyAccountRepository.findByCustomerId(customerId)
                 .orElseThrow(() -> new CustomerNotFoundException(customerId));
@@ -106,7 +106,7 @@ public class LoyaltyController {
     }
 
     @PostMapping("/accounts/{customerId}/adjust")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'FLORIST')")
     public void adjustPoints(@PathVariable UUID customerId, @RequestBody AdjustPointsRequest request) {
         adjustPointsUseCase.execute(new AdjustPointsUseCase.AdjustPointsCommand(
                 customerId,

@@ -33,7 +33,7 @@ public class CustomerController {
     private final CustomerWebMapper mapper;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'OWNER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CASHIER', 'FLORIST', 'OWNER')")
     public CustomerResponse createCustomer(@Valid @RequestBody CreateCustomerRequest request) {
         Customer customer = createCustomerUseCase.execute(mapper.toCommand(request, CustomerSource.POS));
         return mapper.toResponse(customer);

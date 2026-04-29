@@ -22,24 +22,35 @@ public class RecordOrderFactInteractor implements RecordOrderFactUseCase {
     @Override
     @Transactional
     public void record(RecordOrderFactCommand cmd) {
-        if (repository.findByOrderId(cmd.orderId()).isPresent()) {
-            return;
-        }
-        OrderFact fact = OrderFact.builder()
-                .orderId(cmd.orderId()) // Field was named orderId in OrderFact domain model
-                .storeId(cmd.storeId())
-                .customerId(cmd.customerId())
-                .assignedEmployeeId(cmd.assignedEmployeeId())
-                .orderSource(cmd.orderSource())
-                .status("COMPLETED")
-                .totalAmount(cmd.totalAmount())
-                .cogsAmount(BigDecimal.ZERO)
-                .grossProfit(cmd.totalAmount())
-                .itemCount(cmd.itemCount())
-                .completedAt(cmd.completedAt())
-                .recordedAt(Instant.now())
-                .build();
-        repository.save(fact);
-        cachePort.evictDashboard();
+        repository.findByOrderId(cmd.orderId()).ifPresentOrElse(
+            fact -> {
+                // If fact exists, only update status and completion time if it's currently becoming COMPLETED
+                fact.setStatus(cmd.status());
+                if ("COMPLETED".equals(cmd.status())) {
+                    fact.setCompletedAt(cmd.completedAt());
+                }
+                repository.update(fact);
+                cachePort.evictDashboard();
+            },
+            () -> {
+                // Create new fact
+                OrderFact fact = OrderFact.builder()
+                    .orderId(cmd.orderId())
+                    .storeId(cmd.storeId())
+                    .customerId(cmd.customerId())
+                    .assignedEmployeeId(cmd.assignedEmployeeId())
+                    .orderSource(cmd.orderSource())
+                    .status(cmd.status())
+                    .totalAmount(cmd.totalAmount())
+                    .cogsAmount(BigDecimal.ZERO)
+                    .grossProfit(cmd.totalAmount())
+                    .itemCount(cmd.itemCount())
+                    .completedAt(cmd.completedAt())
+                    .recordedAt(Instant.now())
+                    .build();
+                repository.save(fact);
+                cachePort.evictDashboard();
+            }
+        );
     }
 }

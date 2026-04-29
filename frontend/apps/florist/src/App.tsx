@@ -7,6 +7,9 @@ import ProfilePage from './pages/ProfilePage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import InventoryDetailPage from './pages/InventoryDetailPage';
 import InventoryAuditPage from './pages/InventoryAuditPage';
+import PosPage from './pages/PosPage';
+import ShowcasePage from './pages/ShowcasePage';
+import CourierTerminal from './pages/CourierTerminal';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 
 export default function App() {
@@ -14,14 +17,17 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route element={<ProtectedRoute allowedRoles={['FLORIST', 'CASHIER']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['FLORIST', 'CASHIER', 'ADMIN', 'COURIER']} />}>
           <Route element={<AppShell />}>
-            <Route path="/" element={<Navigate to="/orders" replace />} />
+            <Route path="/" element={<Navigate to="/pos" replace />} />
+            <Route path="/pos" element={<PosPage />} />
             <Route path="/orders" element={<KanbanPage />} />
             <Route path="/orders/:id" element={<OrderDetailPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/inventory/:productId" element={<InventoryDetailPage />} />
             <Route path="/inventory/audit" element={<InventoryAuditPage />} />
+            <Route path="/showcase" element={<ShowcasePage />} />
+            <Route path="/courier" element={<CourierTerminal />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
         </Route>

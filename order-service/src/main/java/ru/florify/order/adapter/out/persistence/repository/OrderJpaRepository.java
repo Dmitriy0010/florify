@@ -29,4 +29,7 @@ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> 
 
     List<OrderJpaEntity> findByCustomerId(@Param("customerId") UUID customerId);
     List<OrderJpaEntity> findByFloristId(@Param("floristId") UUID floristId);
+    
+    @Query("SELECT o FROM OrderJpaEntity o ORDER BY o.createdAt DESC")
+    List<OrderJpaEntity> findAllOrderByCreatedAtDesc(Pageable pageable);
 }

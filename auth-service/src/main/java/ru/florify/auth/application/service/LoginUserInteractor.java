@@ -46,15 +46,20 @@ public class LoginUserInteractor implements LoginUserUseCase {
         User user = userRepository.findByEmail(command.email())
                 .orElseThrow(AuthCredentialsInvalidException::new);
 
+        log.info("User found: {}, roles: {}", user.email(), user.roles());
+        
         if (!passwordHasher.matches(command.password(), user.passwordHash())) {
+            log.warn("Login failed: password mismatch for email: {}", command.email());
             throw new AuthCredentialsInvalidException();
         }
 
         if (!user.active()) {
+            log.warn("Login failed: user {} is deactivated", command.email());
             throw new ForbiddenException("Account is deactivated");
         }
 
         // Generate tokens upon successful login
+        log.debug("Generating tokens for user: {}", user.id());
         String accessToken = tokenGenerator.generateAccessToken(user);
         Instant accessTokenExpiresAt = tokenGenerator.getExpiration(accessToken);
 
@@ -69,6 +74,8 @@ public class LoginUserInteractor implements LoginUserUseCase {
                 now
         );
         refreshTokenRepository.save(refreshTokenModel);
+
+        log.info("Login successful for email: {}. Response tokens generated.", command.email());
 
         return new AuthTokensResult(
                 accessToken,

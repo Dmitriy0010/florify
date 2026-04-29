@@ -14,6 +14,8 @@ import ru.florify.inventory.domain.model.TransactionType;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import ru.florify.inventory.domain.model.WriteOffReason;
+
 @Service
 @RequiredArgsConstructor
 public class GetWriteOffLogsInteractor implements GetWriteOffLogsUseCase {
@@ -23,8 +25,9 @@ public class GetWriteOffLogsInteractor implements GetWriteOffLogsUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<WriteOffLogResponse> execute() {
-        Page<StockTransactionJpaEntity> page = repository.findByTypeOrderByCreatedAtDesc(
+        Page<StockTransactionJpaEntity> page = repository.findByTypeAndWriteOffReasonNot(
             TransactionType.WRITE_OFF, 
+            WriteOffReason.SALE,
             PageRequest.of(0, 100) // Default to latest 100 for now. Could add pagination.
         );
 

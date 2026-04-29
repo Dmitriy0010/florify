@@ -47,7 +47,6 @@ public class OrderFactJpaEntity {
 
     private Integer itemCount;
 
-    @Column(nullable = false)
     private Instant completedAt;
 
     private Instant cancelledAt;

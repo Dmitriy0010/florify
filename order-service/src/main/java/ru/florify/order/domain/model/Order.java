@@ -56,6 +56,7 @@ public class Order {
             OrderType type,
             OrderSource source,
             PaymentMethod paymentMethod,
+            OrderStatus status,
             String deliveryAddress,
             UUID deliverySlotId,
             UUID deliveryZoneId,
@@ -68,7 +69,10 @@ public class Order {
 
         BigDecimal finalAmount = total.subtract(BigDecimal.valueOf(bonusPointsUsed));
 
-        OrderStatus initialStatus = source == OrderSource.POS ? OrderStatus.CONFIRMED : OrderStatus.PENDING_STOCK;
+        OrderStatus initialStatus = (status != null) ? status : 
+            (source == OrderSource.POS ? OrderStatus.CONFIRMED : OrderStatus.PENDING_STOCK);
+
+        boolean initialPaid = (initialStatus == OrderStatus.COMPLETED);
 
         return Order.builder()
                 .id(UUID.randomUUID())
@@ -90,7 +94,7 @@ public class Order {
                 .deliverySlotId(deliverySlotId)
                 .deliveryZoneId(deliveryZoneId)
                 .storeId(storeId)
-                .isPaid(false)
+                .isPaid(initialPaid)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();

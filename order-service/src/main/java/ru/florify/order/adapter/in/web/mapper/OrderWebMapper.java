@@ -33,6 +33,7 @@ public interface OrderWebMapper {
     @Mapping(target = "deliveryAddress", source = "request.deliveryAddress")
     @Mapping(target = "deliverySlotId", source = "request.deliverySlotId")
     @Mapping(target = "deliveryZoneId", source = "request.deliveryZoneId")
+    @Mapping(target = "status", source = "request.status")
     CreateOrderCommand toCommand(CreateOrderRequest request, UUID customerId, String idempotencyKey);
 
     @Mapping(target = "orderId", source = "orderId")

@@ -99,17 +99,31 @@ public class WriteOffStockInteractor implements WriteOffStockUseCase {
                 .orElseThrow(() -> new NotFoundException("StockBalance", 
                         command.productId() + " in store " + command.storeId()));
         
-        StockTransaction transaction = StockTransaction.forWriteOff(
-                command.productId(),
-                command.storeId(),
-                command.quantity(),
-                balance.getAverageCost(),
-                command.reason(),
-                command.comment(),
-                sourceDocId,
-                command.performerId(),
-                clock.instant()
-        );
+        StockTransaction transaction;
+        if (command.reason() == ru.florify.inventory.domain.model.WriteOffReason.SALE) {
+            transaction = StockTransaction.forOutbound(
+                    command.productId(),
+                    command.storeId(),
+                    command.quantity(),
+                    balance.getAverageCost(),
+                    command.comment(),
+                    sourceDocId,
+                    command.performerId(),
+                    clock.instant()
+            );
+        } else {
+            transaction = StockTransaction.forWriteOff(
+                    command.productId(),
+                    command.storeId(),
+                    command.quantity(),
+                    balance.getAverageCost(),
+                    command.reason(),
+                    command.comment(),
+                    sourceDocId,
+                    command.performerId(),
+                    clock.instant()
+            );
+        }
         // Ensure storeId is handled in transactions (domain model check if needed)
         transactionPort.save(transaction);
 

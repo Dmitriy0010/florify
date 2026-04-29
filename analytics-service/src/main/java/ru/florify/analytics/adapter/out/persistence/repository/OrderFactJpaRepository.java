@@ -18,17 +18,17 @@ public interface OrderFactJpaRepository extends JpaRepository<OrderFactJpaEntity
 
     @Query("select count(o) from OrderFactJpaEntity o " +
            "where (:storeId is null or o.storeId = :storeId) " +
-           "and o.completedAt >= :from and o.completedAt <= :to and o.status = 'COMPLETED'")
+           "and o.recordedAt >= :from and o.recordedAt <= :to and o.status != 'CANCELLED'")
     long countOrders(UUID storeId, Instant from, Instant to);
 
     @Query("select coalesce(sum(o.totalAmount), 0) from OrderFactJpaEntity o " +
            "where (:storeId is null or o.storeId = :storeId) " +
-           "and o.completedAt >= :from and o.completedAt <= :to and o.status = 'COMPLETED'")
+           "and o.recordedAt >= :from and o.recordedAt <= :to and o.status != 'CANCELLED'")
     BigDecimal sumRevenue(UUID storeId, Instant from, Instant to);
 
     @Query("select count(o) from OrderFactJpaEntity o " +
            "where (:storeId is null or o.storeId = :storeId) " +
-           "and o.completedAt >= :from and o.completedAt <= :to and o.status = 'CANCELLED'")
+           "and o.cancelledAt >= :from and o.cancelledAt <= :to and o.status = 'CANCELLED'")
     long countCancelledOrders(UUID storeId, Instant from, Instant to);
 
     @Query("select count(distinct o.customerId) from OrderFactJpaEntity o where o.customerId is not null")
@@ -39,11 +39,11 @@ public interface OrderFactJpaRepository extends JpaRepository<OrderFactJpaEntity
 
     // Projections for aggregate queries
     @Query("select new ru.florify.analytics.adapter.out.persistence.projection.SalesDataPointProjection(" +
-           "cast(o.completedAt as localdate), count(o), sum(o.totalAmount), sum(o.grossProfit)) " +
+           "cast(o.recordedAt as localdate), count(o), sum(o.totalAmount), sum(o.grossProfit)) " +
            "from OrderFactJpaEntity o " +
            "where (:storeId is null or o.storeId = :storeId) " +
-           "and o.completedAt >= :from and o.completedAt <= :to and o.status = 'COMPLETED' " +
-           "group by cast(o.completedAt as localdate) order by cast(o.completedAt as localdate)")
+           "and o.recordedAt >= :from and o.recordedAt <= :to and o.status != 'CANCELLED' " +
+           "group by cast(o.recordedAt as localdate) order by cast(o.recordedAt as localdate)")
     List<SalesDataPointProjection> aggregateSalesReportByDay(UUID storeId, Instant from, Instant to);
 
     @Query("select new ru.florify.analytics.adapter.out.persistence.projection.TopProductProjection(" +

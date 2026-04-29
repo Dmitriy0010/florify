@@ -31,4 +31,10 @@ public class GetOrdersByCustomerInteractor implements GetOrdersByCustomerUseCase
         log.debug("Fetching orders for florist {}", floristId);
         return orderRepository.findByFloristId(floristId);
     }
+    @Override
+    @Transactional(readOnly = true)
+    public List<Order> executeRecent(int limit) {
+        log.debug("Fetching {} most recent orders", limit);
+        return orderRepository.findRecent(limit);
+    }
 }

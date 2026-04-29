@@ -25,7 +25,7 @@ public class TimesheetController {
     private final TimesheetWebMapper mapper;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','FLORIST','CASHIER','COURIER')")
     public ResponseEntity<List<TimesheetEntryResponse>> list(
             @RequestParam(required = false) UUID employeeId,
             @RequestParam String month) {
@@ -42,13 +42,13 @@ public class TimesheetController {
     }
 
     @PostMapping("/checkin")
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','FLORIST','CASHIER','COURIER')")
     public ResponseEntity<TimesheetEntryResponse> checkin(@Valid @RequestBody TimesheetActionRequest request) {
         return ResponseEntity.status(201).body(mapper.toResponse(timesheetUseCase.checkin(new CheckinCommand(request.employeeId()))));
     }
 
     @PostMapping("/checkout")
-    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','MANAGER','FLORIST','CASHIER','COURIER')")
     public ResponseEntity<TimesheetEntryResponse> checkout(@Valid @RequestBody TimesheetActionRequest request) {
         return ResponseEntity.ok(mapper.toResponse(timesheetUseCase.checkout(new CheckoutCommand(request.employeeId()))));
     }

@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface GetOrdersByCustomerUseCase extends UseCase<UUID, List<Order>> {
     List<Order> executeByFlorist(UUID floristId);
+    List<Order> executeRecent(int limit);
 }

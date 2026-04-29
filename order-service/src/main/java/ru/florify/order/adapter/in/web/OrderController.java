@@ -41,7 +41,7 @@ public class OrderController {
 
     @PostMapping
     @Operation(summary = "Create a new order", description = "Placing a new order. Open to guests and registered users.")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'CASHIER', 'ADMIN', 'OWNER') or isAnonymous()")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'CASHIER', 'FLORIST', 'ADMIN', 'OWNER') or isAnonymous()")
     public ResponseEntity<OrderResponse> createOrder(
             @Valid @RequestBody CreateOrderRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
@@ -80,7 +80,7 @@ public class OrderController {
             // New filter for employee activity
             orders = getOrdersByCustomerUseCase.executeByFlorist(floristId);
         } else {
-            return ResponseEntity.ok(List.of());
+            orders = getOrdersByCustomerUseCase.executeRecent(10);
         }
         
         return ResponseEntity.ok(orders.stream()

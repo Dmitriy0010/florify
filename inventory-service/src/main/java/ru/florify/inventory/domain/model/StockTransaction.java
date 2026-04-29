@@ -69,5 +69,31 @@ public record StockTransaction(
                 createdAt
         );
     }
+
+    public static StockTransaction forOutbound(
+            UUID productId,
+            UUID storeId,
+            BigDecimal quantity,
+            BigDecimal currentAverageCost,
+            String comment,
+            String sourceDocumentId,
+            UUID performerId,
+            Instant createdAt
+    ) {
+        return new StockTransaction(
+                UUID.randomUUID(),
+                productId,
+                storeId,
+                TransactionType.OUTBOUND,
+                quantity,
+                currentAverageCost,
+                quantity.multiply(currentAverageCost),
+                WriteOffReason.SALE,
+                comment,
+                sourceDocumentId,
+                performerId,
+                createdAt
+        );
+    }
 }
 

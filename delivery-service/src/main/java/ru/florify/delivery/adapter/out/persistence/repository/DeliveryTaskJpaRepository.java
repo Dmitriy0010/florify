@@ -17,6 +17,10 @@ public interface DeliveryTaskJpaRepository extends JpaRepository<DeliveryTaskJpa
 
     List<DeliveryTaskJpaEntity> findAllByCourierId(UUID courierId);
 
+    List<DeliveryTaskJpaEntity> findAllByCourierIdOrderByEstimatedArrivalAsc(UUID courierId);
+
+    List<DeliveryTaskJpaEntity> findByStatusAndCourierIdIsNullOrderByEstimatedArrivalAsc(TaskStatus status);
+
     boolean existsByOrderId(UUID orderId);
 
     void deleteByOrderId(UUID orderId);

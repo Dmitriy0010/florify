@@ -62,7 +62,14 @@ public class OrderPersistenceAdapter implements OrderRepository {
     @Override
     public List<Order> findByFloristId(UUID floristId) {
         return repository.findByFloristId(floristId).stream()
-                .map(mapper::toDomainWithoutItems)
+                .map(mapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Order> findRecent(int limit) {
+        return repository.findAllOrderByCreatedAtDesc(PageRequest.of(0, limit)).stream()
+                .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }
 }

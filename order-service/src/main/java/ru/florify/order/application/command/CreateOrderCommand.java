@@ -2,6 +2,7 @@ package ru.florify.order.application.command;
 
 import ru.florify.order.domain.model.OrderItem;
 import ru.florify.order.domain.model.OrderSource;
+import ru.florify.order.domain.model.OrderStatus;
 import ru.florify.order.domain.model.OrderType;
 import ru.florify.order.domain.model.PaymentMethod;
 
@@ -20,6 +21,7 @@ public record CreateOrderCommand(
         OrderSource source,
         PaymentMethod paymentMethod,
         String idempotencyKey,
+        OrderStatus status,
         String deliveryAddress,
         UUID deliverySlotId,
         UUID deliveryZoneId

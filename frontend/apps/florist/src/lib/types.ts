@@ -1,6 +1,6 @@
 export type UserRole = 'FLORIST' | 'CASHIER' | 'ADMIN' | 'OWNER' | 'MANAGER' | string;
 
-export type OrderStatus = 'CONFIRMED' | 'IN_PROGRESS' | 'READY' | string;
+export type OrderStatus = 'CONFIRMED' | 'IN_PROGRESS' | 'READY' | 'OUT_FOR_DELIVERY' | 'COMPLETED' | string;
 export type WriteOffReason = 'SPOILAGE' | 'DAMAGE' | 'INVENTORY_LOSS';
 
 export interface LoginRequest {
@@ -33,6 +33,9 @@ export interface OrderKanbanItem {
   type?: 'DELIVERY' | 'PICKUP' | string;
   deliverySlot?: string;
   deliveryAddress?: string;
+  totalAmount?: number;
+  finalAmount?: number;
+  createdAt?: string;
   items?: Array<{
     productId?: string;
     productName?: string;
@@ -96,6 +99,45 @@ export interface ChangePasswordPayload {
   newPassword: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  active: boolean;
+}
+
+export interface CatalogProduct {
+  id: string;
+  sku: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  unit: string;
+  currentPrice: number;
+  imageUrl?: string;
+  active: boolean;
+}
+
+export interface CreateOrderRequest {
+  storeId: string;
+  customerId?: string;
+  bonusPointsUsed?: number;
+  items: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+    notes?: string;
+  }>;
+  type?: string;
+  source?: string;
+  paymentMethod?: string;
+  deliverySlot?: string;
+  deliveryAddress?: string;
+  comment?: string;
+}
+
 export type OfflineMutationType =
   | 'write-off'
   | 'status-change'
@@ -109,4 +151,32 @@ export interface OfflineMutation<TPayload = unknown> {
   payload: TPayload;
   createdAt: number;
   attempts: number;
+}
+
+export interface Customer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+  loyaltyTier?: string;
+  active: boolean;
+}
+
+export interface LoyaltyAccount {
+  id: string;
+  customerId: string;
+  activePoints: number;
+  totalPointsEarned: number;
+  totalPointsSpent: number;
+  tier: string;
+}
+
+export interface LoyaltyTransaction {
+  id: string;
+  accountId: string;
+  points: number;
+  type: 'EARNED' | 'SPENT' | 'EXPIRED' | 'ADJUSTMENT';
+  description: string;
+  createdAt: string;
 }

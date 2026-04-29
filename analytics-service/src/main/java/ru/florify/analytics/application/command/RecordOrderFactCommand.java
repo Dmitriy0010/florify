@@ -12,6 +12,7 @@ public record RecordOrderFactCommand(
         UUID customerId,        // nullable
         UUID assignedEmployeeId, // nullable
         OrderSource orderSource,
+        String status,
         BigDecimal totalAmount,
         Integer itemCount,
         Instant completedAt

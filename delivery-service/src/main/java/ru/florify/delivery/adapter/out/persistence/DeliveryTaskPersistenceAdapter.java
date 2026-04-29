@@ -46,6 +46,20 @@ public class DeliveryTaskPersistenceAdapter implements DeliveryTaskRepository {
     }
 
     @Override
+    public List<DeliveryTask> findByCourierIdSorted(UUID courierId) {
+        return jpaRepository.findAllByCourierIdOrderByEstimatedArrivalAsc(courierId).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<DeliveryTask> findFreeTasks() {
+        return jpaRepository.findByStatusAndCourierIdIsNullOrderByEstimatedArrivalAsc(TaskStatus.CREATED).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<DeliveryTask> findByStatusAndDate(TaskStatus status, LocalDate date) {
         return jpaRepository.findByStatusAndSlotDate(status, date).stream()
                 .map(mapper::toDomain)

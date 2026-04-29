@@ -7,19 +7,42 @@ import {
   Trash2, 
   CheckCircle2, 
   Map,
-  Settings2
+  Settings2,
+  X,
+  Save,
+  Info
 } from 'lucide-react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { DeliveryService } from '@/lib/api'
+import { DeliveryService, DeliveryZone } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 export default function DeliveryZonesPage() {
   const queryClient = useQueryClient()
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingZone, setEditingZone] = useState<Partial<DeliveryZone> | null>(null)
 
   const { data: zones = [], isLoading } = useQuery({
     queryKey: ['delivery-zones'],
     queryFn: () => DeliveryService.getZones().then(res => res.data)
+  })
+
+  const mutation = useMutation({
+    mutationFn: (data: any) => {
+      if (editingZone?.id) {
+        return DeliveryService.updateZone(editingZone.id, data)
+      }
+      return DeliveryService.createZone(data)
+    },
+    onSuccess: () => {
+      toast.success(editingZone?.id ? 'Зона обновлена' : 'Зона создана')
+      queryClient.invalidateQueries({ queryKey: ['delivery-zones'] })
+      handleCloseModal()
+    },
+    onError: () => {
+      toast.error('Ошибка при сохранении зоны')
+    }
   })
 
   const deleteMutation = useMutation({
@@ -30,7 +53,28 @@ export default function DeliveryZonesPage() {
     }
   })
 
-  // Basic filter (can be extended if search is added)
+  const handleOpenModal = (zone?: DeliveryZone) => {
+    setEditingZone(zone || { name: '', deliveryFee: 0, minOrderAmount: 0, active: true })
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setEditingZone(null)
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      name: formData.get('name') as string,
+      deliveryFee: Number(formData.get('deliveryFee')),
+      minOrderAmount: Number(formData.get('minOrderAmount')),
+      active: true
+    }
+    mutation.mutate(data)
+  }
+
   const filteredZones = zones.filter(z => (z.name || '').trim() !== '')
 
   if (isLoading) {
@@ -51,7 +95,10 @@ export default function DeliveryZonesPage() {
           <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mt-1">Настройка тарифов и условий по регионам</p>
         </div>
 
-        <button className="h-11 px-8 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-black/10 flex items-center gap-2">
+        <button 
+          onClick={() => handleOpenModal()}
+          className="h-11 px-8 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-black/10 flex items-center gap-2"
+        >
            <Plus className="h-4 w-4" />
            Добавить зону
         </button>
@@ -123,7 +170,10 @@ export default function DeliveryZonesPage() {
                     <CheckCircle2 size={14} className="text-green-500" />
                     <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Проверено</span>
                  </div>
-                 <button className="text-[10px] font-black text-[var(--color-brand)] uppercase tracking-widest hover:underline">
+                 <button 
+                  onClick={() => handleOpenModal(zone)}
+                  className="text-[10px] font-black text-[var(--color-brand)] uppercase tracking-widest hover:underline"
+                >
                     Редактировать
                  </button>
               </div>
@@ -131,13 +181,107 @@ export default function DeliveryZonesPage() {
          ))}
 
          {/* Add New Zone Card (Empty State) */}
-         <button className="h-full min-h-[300px] border-2 border-dashed border-neutral-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-light)]/10 transition-all group">
+         <button 
+          onClick={() => handleOpenModal()}
+          className="h-full min-h-[300px] border-2 border-dashed border-neutral-100 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-light)]/10 transition-all group"
+        >
             <div className="h-14 w-14 rounded-full bg-neutral-50 flex items-center justify-center text-neutral-300 group-hover:bg-[var(--color-brand)] group-hover:text-white transition-all">
                <Plus size={32} />
             </div>
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-hover:text-[var(--color-brand)]">Новая зона доставки</p>
          </button>
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+              <form onSubmit={handleSubmit}>
+                <div className="p-10 pb-6 flex items-center justify-between">
+                   <h2 className="text-2xl font-black text-neutral-900 tracking-tight">
+                    {editingZone?.id ? 'Редактировать зону' : 'Новая зона доставки'}
+                   </h2>
+                   <button 
+                    type="button"
+                    onClick={handleCloseModal} 
+                    className="h-10 w-10 flex items-center justify-center text-neutral-300 hover:text-neutral-900 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="px-10 space-y-6">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Название зоны</label>
+                      <input 
+                        name="name"
+                        required
+                        defaultValue={editingZone?.name}
+                        placeholder="Например: Центральный район"
+                        className="w-full h-14 px-6 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:border-[var(--color-brand)] transition-all outline-none"
+                      />
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Стоимость доставки (₽)</label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-300" />
+                          <input 
+                            name="deliveryFee"
+                            type="number"
+                            required
+                            min="0"
+                            defaultValue={editingZone?.deliveryFee}
+                            className="w-full h-14 pl-12 pr-6 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:border-[var(--color-brand)] transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Мин. сумма заказа (₽)</label>
+                        <div className="relative">
+                          <ShoppingBag className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-300" />
+                          <input 
+                            name="minOrderAmount"
+                            type="number"
+                            required
+                            min="0"
+                            defaultValue={editingZone?.minOrderAmount}
+                            className="w-full h-14 pl-12 pr-6 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold focus:border-[var(--color-brand)] transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+                   </div>
+
+                   <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-[2rem] flex gap-4">
+                      <Info className="h-5 w-5 text-blue-500 shrink-0" />
+                      <p className="text-[11px] font-medium text-blue-700 leading-relaxed">
+                        Пока что зоны определяются по названиям. В будущем мы добавим интерактивную карту для рисования полигонов.
+                      </p>
+                   </div>
+                </div>
+
+                <div className="p-10 flex gap-4">
+                   <button 
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="flex-1 h-14 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors"
+                  >
+                    Отмена
+                  </button>
+                   <button 
+                    type="submit"
+                    disabled={mutation.isPending}
+                    className="flex-[2] h-14 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {mutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                    {editingZone?.id ? 'Сохранить изменения' : 'Создать зону'}
+                  </button>
+                </div>
+              </form>
+           </div>
+        </div>
+      )}
     </div>
   )
 }

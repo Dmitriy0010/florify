@@ -1,6 +1,6 @@
 import { Calendar } from 'lucide-react'
 import { useDashboardStore } from '@/store/useDashboardStore'
-import { format, subDays, startOfDay } from 'date-fns'
+import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 export function DashboardFilters() {
@@ -8,8 +8,9 @@ export function DashboardFilters() {
 
   const setPreset = (days: number) => {
     const to = new Date()
-    const from = days === 0 ? startOfDay(to) : subDays(to, days)
-    setDateRange({ from: from.toISOString(), to: to.toISOString() })
+    const from = days === 0 ? startOfDay(to) : startOfDay(subDays(to, days))
+    const toRange = endOfDay(to)
+    setDateRange({ from: from.toISOString(), to: toRange.toISOString() })
   }
 
   const isPresetActive = (days: number) => {
@@ -68,14 +69,14 @@ export function DashboardFilters() {
           <input 
             type="date"
             value={format(new Date(dateRange.from), 'yyyy-MM-dd')}
-            onChange={(e) => setDateRange({ ...dateRange, from: new Date(e.target.value).toISOString() })}
+            onChange={(e) => setDateRange({ ...dateRange, from: startOfDay(new Date(e.target.value)).toISOString() })}
             className="bg-transparent text-xs font-bold text-neutral-700 outline-none focus:text-[var(--color-brand)] transition-colors cursor-pointer"
           />
           <span className="text-neutral-300 font-bold">—</span>
           <input 
             type="date"
             value={format(new Date(dateRange.to), 'yyyy-MM-dd')}
-            onChange={(e) => setDateRange({ ...dateRange, to: new Date(e.target.value).toISOString() })}
+            onChange={(e) => setDateRange({ ...dateRange, to: endOfDay(new Date(e.target.value)).toISOString() })}
             className="bg-transparent text-xs font-bold text-neutral-700 outline-none focus:text-[var(--color-brand)] transition-colors cursor-pointer"
           />
         </div>

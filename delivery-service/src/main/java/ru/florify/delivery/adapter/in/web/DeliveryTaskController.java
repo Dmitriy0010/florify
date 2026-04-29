@@ -66,14 +66,23 @@ public class DeliveryTaskController {
     }
 
     @GetMapping("/my")
-    @Operation(summary = "Get current courier's own tasks")
+    @Operation(summary = "Get current courier's own tasks (sorted by time)")
     @PreAuthorize("hasRole('COURIER')")
     public ResponseEntity<List<DeliveryTaskResponse>> getMy(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        List<DeliveryTaskResponse> tasks = taskRepository.findByCourierId(principal.getUserId()).stream()
+        List<DeliveryTaskResponse> tasks = taskRepository.findByCourierIdSorted(principal.getUserId()).stream()
                 .map(mapper::toResponse)
                 .toList();
+        return ResponseEntity.ok(tasks);
+    }
+
+    @GetMapping("/free")
+    @Operation(summary = "Get available (unassigned) delivery tasks")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COURIER')")
+    public ResponseEntity<List<DeliveryTaskResponse>> getFree() {
+        List<DeliveryTaskResponse> tasks = taskRepository.findFreeTasks().stream()
+                .map(mapper::toResponse).toList();
         return ResponseEntity.ok(tasks);
     }
 
@@ -112,12 +121,19 @@ public class DeliveryTaskController {
 
     @PutMapping("/{id}/assign")
     @Operation(summary = "Assign courier to delivery task")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'COURIER')")
     public ResponseEntity<DeliveryTaskResponse> assignCourier(
             @PathVariable UUID id,
             @Valid @RequestBody AssignCourierRequest request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
+        // IDOR: курьер может назначать только САМОГО СЕБЯ
+        if (principal.getRoles().contains("ROLE_COURIER")) {
+            if (!request.courierId().equals(principal.getUserId())) {
+                throw new ru.florify.common.exception.ForbiddenException("Couriers can only assign themselves");
+            }
+        }
+
         return ResponseEntity.ok(
                 mapper.toResponse(assignCourierUseCase.execute(mapper.toCommand(id, request, principal.getUserId())))
         );

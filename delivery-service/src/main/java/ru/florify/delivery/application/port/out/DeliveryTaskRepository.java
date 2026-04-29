@@ -29,6 +29,16 @@ public interface DeliveryTaskRepository {
     List<DeliveryTask> findByCourierId(UUID courierId);
 
     /**
+     * Найти задачи курьера, отсортированные по времени прибытия (ASC).
+     */
+    List<DeliveryTask> findByCourierIdSorted(UUID courierId);
+
+    /**
+     * Найти свободные задачи (без курьера) в статусе CREATED, отсортированные по времени.
+     */
+    List<DeliveryTask> findFreeTasks();
+
+    /**
      * Найти задачи по статусу и дате слота.
      * Дата берётся из связанного DeliverySlot (JOIN по slotId).
      */

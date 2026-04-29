@@ -13,9 +13,11 @@ public record OrderCreatedEvent(
     UUID storeId,
     int bonusPointsUsed,
     BigDecimal totalAmount,
+    int itemCount,
+    String orderSource,
     Instant occurredAt
 ) {
-    public static OrderCreatedEvent of(UUID orderId, UUID customerId, UUID storeId, int bonusPointsUsed, BigDecimal totalAmount, Instant now) {
-        return new OrderCreatedEvent(orderId, customerId, storeId, bonusPointsUsed, totalAmount, now);
+    public static OrderCreatedEvent of(UUID orderId, UUID customerId, UUID storeId, int bonusPointsUsed, BigDecimal totalAmount, int itemCount, String orderSource, Instant now) {
+        return new OrderCreatedEvent(orderId, customerId, storeId, bonusPointsUsed, totalAmount, itemCount, orderSource, now);
     }
 }

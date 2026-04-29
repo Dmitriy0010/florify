@@ -3,6 +3,7 @@ package ru.florify.order.adapter.in.web.dto;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import ru.florify.order.domain.model.OrderSource;
+import ru.florify.order.domain.model.OrderStatus;
 import ru.florify.order.domain.model.OrderType;
 import ru.florify.order.domain.model.PaymentMethod;
 
@@ -33,6 +34,8 @@ public record CreateOrderRequest(
 
         @NotNull
         PaymentMethod paymentMethod,
+
+        OrderStatus status,
 
         String deliveryAddress,
         UUID deliverySlotId,

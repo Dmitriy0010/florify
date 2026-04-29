@@ -14,16 +14,8 @@ import ru.florify.delivery.application.port.out.DeliveryTaskRepository;
 /**
  * Слушатель Spring Events от order-service.
  *
- * При переводе заказа в статус OUT_FOR_DELIVERY автоматически создаёт
+ * При переводе заказа в статус READY автоматически создаёт
  * задачу доставки через CreateDeliveryTaskUseCase.
- *
- * Принцип работы:
- * - order-service публикует OrderStatusChangedSpringEvent через ApplicationEventPublisher.
- * - delivery-service (в той же JVM) принимает событие через @EventListener.
- * - Никаких Kafka или HTTP-вызовов — чисто in-process коммуникация.
- *
- * @Async — событие обрабатывается в отдельном potoke (Virtual Thread),
- * не блокирует транзакцию order-service.
  */
 @Slf4j
 @Component
@@ -37,12 +29,18 @@ public class OrderStatusChangedEventConsumer {
     @EventListener
     @Transactional
     public void handle(OrderStatusChangedSpringEvent event) {
-        // Нас интересует только переход в OUT_FOR_DELIVERY
-        if (!"OUT_FOR_DELIVERY".equals(event.newStatus())) {
+        // Нас интересует только переход в READY (флорист закончил сборку)
+        if (!"READY".equals(event.newStatus())) {
             return;
         }
 
-        log.info("OrderStatusChangedEvent received: orderId={} → OUT_FOR_DELIVERY", event.orderId());
+        // Проверяем тип заказа. Если это самовывоз (PICKUP) — задача доставки не нужна.
+        if ("PICKUP".equals(event.orderType())) {
+            log.info("Order {} is PICKUP, skipping delivery task creation", event.orderId());
+            return;
+        }
+
+        log.info("OrderStatusChangedEvent received: orderId={} → READY (DELIVERY)", event.orderId());
 
         // POS/Pickup detection: if no address provided, it's not a delivery task candidate
         if (event.deliveryAddress() == null || event.deliveryAddress().isBlank() || "Address not provided".equals(event.deliveryAddress())) {

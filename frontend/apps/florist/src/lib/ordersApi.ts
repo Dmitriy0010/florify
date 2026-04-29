@@ -25,4 +25,8 @@ export const ordersApi = {
   markReady: async (id: string) => {
     return ordersApi.updateStatus(id, 'READY');
   },
+  createOrder: async (payload: any) => {
+    const { data } = await apiClient.post('/v1/orders', payload);
+    return data;
+  },
 };

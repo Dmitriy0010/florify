@@ -58,14 +58,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
             
             if (tokenBlacklist != null && tokenBlacklist.isBlacklisted(token)) {
-                log.debug("Token is blacklisted: {}", token);
+                log.warn("Token is blacklisted: {}", token);
             } else {
                 UserPrincipal principal = parseToken(token);
 
                 if (principal != null) {
+                    log.info("Successfully authenticated user from JWT: {} with roles {}", principal.getUserId(), principal.getAuthorities());
                     var authentication = new UsernamePasswordAuthenticationToken(
                             principal, token, principal.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else {
+                    log.warn("Failed to parse/validate JWT token");
                 }
             }
         }
@@ -91,7 +94,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             return new UserPrincipal(userId, roles);
         } catch (Exception ex) {
-            log.debug("Invalid JWT token: {}", ex.getMessage());
+            log.warn("Invalid JWT token: {}", ex.getMessage());
             return null;
         }
     }

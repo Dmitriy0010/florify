@@ -46,6 +46,7 @@ public class CreateOrderInteractor implements CreateOrderUseCase {
                 command.type(),
                 command.source(),
                 command.paymentMethod(),
+                command.status(),
                 command.deliveryAddress(),
                 command.deliverySlotId(),
                 command.deliveryZoneId(),
@@ -53,6 +54,10 @@ public class CreateOrderInteractor implements CreateOrderUseCase {
                 now
         );
         Order savedOrder = orderRepository.save(order);
+
+        int itemCount = savedOrder.getItems().stream()
+                .map(item -> item.quantity().intValue())
+                .reduce(0, Integer::sum);
 
         eventPublisher.publish(
                 "orders.order.created",
@@ -63,6 +68,8 @@ public class CreateOrderInteractor implements CreateOrderUseCase {
                         savedOrder.getStoreId(),
                         savedOrder.getBonusPointsUsed(),
                         savedOrder.getTotalAmount(),
+                        itemCount,
+                        savedOrder.getSource().name(),
                         now
                 )
         );
@@ -74,6 +81,8 @@ public class CreateOrderInteractor implements CreateOrderUseCase {
                         savedOrder.getStoreId(),
                         savedOrder.getBonusPointsUsed(),
                         savedOrder.getTotalAmount(),
+                        itemCount,
+                        savedOrder.getSource().name(),
                         now
                 )
         );

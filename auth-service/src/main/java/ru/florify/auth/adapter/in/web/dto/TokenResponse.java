@@ -8,5 +8,6 @@ public record TokenResponse(
         String refreshToken,
         Instant accessTokenExpiresAt,
         Instant refreshTokenExpiresAt,
-        UUID userId
+        UUID userId,
+        java.util.Set<String> roles
 ) {}

@@ -151,14 +151,15 @@ public class UpdateOrderStatusInteractor implements UpdateOrderStatusUseCase {
             );
         }
 
-        // 5. Spring Event при переводе заказа к курьеру
-        if (command.newStatus() == OrderStatus.OUT_FOR_DELIVERY) {
+        // 5. Spring Event при переводе заказа в READY (для подготовки доставки) или OUT_FOR_DELIVERY
+        if (command.newStatus() == OrderStatus.READY || command.newStatus() == OrderStatus.OUT_FOR_DELIVERY) {
             eventPublisher.publishEvent(
                     OrderStatusChangedSpringEvent.of(
                             savedOrder.getId(),
                             oldStatus.name(),
-                            OrderStatus.OUT_FOR_DELIVERY.name(),
+                            command.newStatus().name(),
                             savedOrder.getDeliveryAddress(),
+                            savedOrder.getType().name(),
                             savedOrder.getCustomerId(),
                             now
                     )

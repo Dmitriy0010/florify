@@ -91,6 +91,107 @@ export default function CouriersPage() {
     }
   }
 
+  const TaskCard = ({ task }: { task: any }) => (
+     <div className="bg-white p-8 rounded-[3rem] border border-neutral-100 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
+        <div className="flex items-start justify-between mb-8 relative z-10">
+           <div className="flex items-center gap-5">
+              <div className="h-16 w-16 rounded-[1.5rem] bg-neutral-50 flex items-center justify-center text-neutral-300 group-hover:bg-[var(--color-brand-light)] group-hover:text-[var(--color-brand)] transition-all shadow-inner">
+                 <MapPin size={32} />
+              </div>
+              <div className="max-w-[200px] md:max-w-xs">
+                 <p className="text-lg font-black text-neutral-900 tracking-tight leading-tight group-hover:text-[var(--color-brand)] transition-colors">{task.deliveryAddress}</p>
+                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                   <Navigation2 size={10} className="rotate-45" />
+                   Расстояние: ~2.4 км
+                 </p>
+              </div>
+           </div>
+           <span className={cn(
+             "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm",
+             getStatusStyle(task.status)
+           )}>
+              {getStatusLabel(task.status)}
+           </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 mb-8 relative z-10">
+           <div className="p-5 bg-neutral-50 rounded-[2rem] border border-neutral-100 group-hover:bg-white transition-all">
+              <div className="flex items-center gap-2 mb-2 opacity-40">
+                <Package className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-black uppercase tracking-widest">Заказ</span>
+              </div>
+              <p className="text-sm font-black text-neutral-900 truncate">#{task.orderId ? task.orderId.substring(0, 8).toUpperCase() : '—'}</p>
+           </div>
+           <div className="p-5 bg-neutral-50 rounded-[2rem] border border-neutral-100 group-hover:bg-white transition-all">
+              <div className="flex items-center gap-2 mb-2 opacity-40">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-black uppercase tracking-widest">Прибытие к</span>
+              </div>
+              <p className="text-sm font-black text-neutral-900">
+                {task.estimatedArrival ? format(new Date(task.estimatedArrival), 'HH:mm', { locale: ru }) : '—'}
+              </p>
+           </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 pt-6 border-t border-neutral-50">
+           <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-300">
+                 {task.courierId ? <CheckCircle2 className="text-green-500" size={20} /> : <User size={20} />}
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">Ответственный</p>
+                <p className={cn("text-xs font-bold", task.courierId ? "text-neutral-900" : "text-neutral-400 italic")}>
+                  {task.courierId ? 'Курьер назначен' : 'Не назначен'}
+                </p>
+              </div>
+           </div>
+           
+           <div className="flex items-center gap-2 w-full md:w-auto">
+              {task.status === 'CREATED' && task.id && (
+                <button 
+                  onClick={() => setSelectedTaskId(task.id!)}
+                  className="flex-1 md:flex-none h-11 px-6 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-xl shadow-black/10"
+                >
+                   <UserPlus size={14} />
+                   Назначить
+                </button>
+              )}
+              
+              {task.status === 'ASSIGNED' && (
+                <button 
+                  onClick={() => handleStatusUpdate(task, 'PICKED_UP')}
+                  className="flex-1 md:flex-none h-11 px-6 bg-purple-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                >
+                   <Truck size={14} />
+                   Забрал товар
+                </button>
+              )}
+
+              {task.status === 'PICKED_UP' && (
+                <button 
+                  onClick={() => handleStatusUpdate(task, 'DELIVERED')}
+                  className="flex-1 md:flex-none h-11 px-6 bg-green-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-200"
+                >
+                   <CheckCircle2 size={14} />
+                   Доставлено
+                </button>
+              )}
+
+              {['CREATED', 'ASSIGNED', 'PICKED_UP'].includes(task.status || '') && (
+                <button 
+                  onClick={() => handleStatusUpdate(task, 'FAILED')}
+                  className="h-11 w-11 flex items-center justify-center rounded-2xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm"
+                >
+                   <XCircle size={18} />
+                </button>
+              )}
+           </div>
+        </div>
+
+        <div className="absolute -right-16 -bottom-16 h-64 w-64 bg-neutral-50/50 rounded-full blur-3xl group-hover:bg-[var(--color-brand-light)]/30 transition-colors" />
+     </div>
+  )
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -130,107 +231,43 @@ export default function CouriersPage() {
            <p className="text-[10px] font-black uppercase tracking-widest">Загрузка задач...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-           {tasks.map((task) => (
-             <div key={task.id} className="bg-white p-8 rounded-[3rem] border border-neutral-100 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-                <div className="flex items-start justify-between mb-8 relative z-10">
-                   <div className="flex items-center gap-5">
-                      <div className="h-16 w-16 rounded-[1.5rem] bg-neutral-50 flex items-center justify-center text-neutral-300 group-hover:bg-[var(--color-brand-light)] group-hover:text-[var(--color-brand)] transition-all shadow-inner">
-                         <MapPin size={32} />
-                      </div>
-                      <div className="max-w-[200px] md:max-w-xs">
-                         <p className="text-lg font-black text-neutral-900 tracking-tight leading-tight group-hover:text-[var(--color-brand)] transition-colors">{task.deliveryAddress}</p>
-                         <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                           <Navigation2 size={10} className="rotate-45" />
-                           Расстояние: ~2.4 км
-                         </p>
-                      </div>
-                   </div>
-                   <span className={cn(
-                     "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm",
-                     getStatusStyle(task.status)
-                   )}>
-                      {getStatusLabel(task.status)}
-                   </span>
-                </div>
+        <div className="space-y-12">
+          {/* Section: Available Tasks */}
+          {tasks.filter(t => !t.courierId).length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="h-1 w-12 bg-orange-500 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-neutral-400">Доступные к назначению ({tasks.filter(t => !t.courierId).length})</h2>
+              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {tasks.filter(t => !t.courierId).map((task) => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+              </div>
+            </div>
+          )}
 
-                <div className="grid grid-cols-2 gap-6 mb-8 relative z-10">
-                   <div className="p-5 bg-neutral-50 rounded-[2rem] border border-neutral-100 group-hover:bg-white transition-all">
-                      <div className="flex items-center gap-2 mb-2 opacity-40">
-                        <Package className="h-3.5 w-3.5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Заказ</span>
-                      </div>
-                      <p className="text-sm font-black text-neutral-900 truncate">#{task.orderId ? task.orderId.substring(0, 8).toUpperCase() : '—'}</p>
-                   </div>
-                   <div className="p-5 bg-neutral-50 rounded-[2rem] border border-neutral-100 group-hover:bg-white transition-all">
-                      <div className="flex items-center gap-2 mb-2 opacity-40">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Прибытие к</span>
-                      </div>
-                      <p className="text-sm font-black text-neutral-900">
-                        {task.estimatedArrival ? format(new Date(task.estimatedArrival), 'HH:mm', { locale: ru }) : '—'}
-                      </p>
-                   </div>
-                </div>
+          {/* Section: In Work Tasks */}
+          {tasks.filter(t => t.courierId).length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="h-1 w-12 bg-blue-500 rounded-full" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-neutral-400">В работе ({tasks.filter(t => t.courierId).length})</h2>
+              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {tasks.filter(t => t.courierId).map((task) => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+              </div>
+            </div>
+          )}
 
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 pt-6 border-t border-neutral-50">
-                   <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-300">
-                         {task.courierId ? <CheckCircle2 className="text-green-500" size={20} /> : <User size={20} />}
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">Ответственный</p>
-                        <p className={cn("text-xs font-bold", task.courierId ? "text-neutral-900" : "text-neutral-400 italic")}>
-                          {task.courierId ? 'Курьер назначен' : 'Не назначен'}
-                        </p>
-                      </div>
-                   </div>
-                   
-                   <div className="flex items-center gap-2 w-full md:w-auto">
-                      {task.status === 'CREATED' && task.id && (
-                        <button 
-                          onClick={() => setSelectedTaskId(task.id!)}
-                          className="flex-1 md:flex-none h-11 px-6 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-xl shadow-black/10"
-                        >
-                           <UserPlus size={14} />
-                           Назначить
-                        </button>
-                      )}
-                      
-                      {task.status === 'ASSIGNED' && (
-                        <button 
-                          onClick={() => handleStatusUpdate(task, 'PICKED_UP')}
-                          className="flex-1 md:flex-none h-11 px-6 bg-purple-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
-                        >
-                           <Truck size={14} />
-                           Забрал товар
-                        </button>
-                      )}
-
-                      {task.status === 'PICKED_UP' && (
-                        <button 
-                          onClick={() => handleStatusUpdate(task, 'DELIVERED')}
-                          className="flex-1 md:flex-none h-11 px-6 bg-green-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-200"
-                        >
-                           <CheckCircle2 size={14} />
-                           Доставлено
-                        </button>
-                      )}
-
-                      {['CREATED', 'ASSIGNED', 'PICKED_UP'].includes(task.status || '') && (
-                        <button 
-                          onClick={() => handleStatusUpdate(task, 'FAILED')}
-                          className="h-11 w-11 flex items-center justify-center rounded-2xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm"
-                        >
-                           <XCircle size={18} />
-                        </button>
-                      )}
-                   </div>
-                </div>
-
-                <div className="absolute -right-16 -bottom-16 h-64 w-64 bg-neutral-50/50 rounded-full blur-3xl group-hover:bg-[var(--color-brand-light)]/30 transition-colors" />
-             </div>
-           ))}
+          {tasks.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-20">
+               <Package className="h-10 w-10" />
+               <p className="text-[10px] font-black uppercase tracking-widest">Задач нет</p>
+            </div>
+          )}
         </div>
       )}
 

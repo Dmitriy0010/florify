@@ -15,4 +15,5 @@ public interface OrderRepository {
     List<OrderKanbanItem> findKanbanByStatus(OrderStatus status, int limit);
     List<Order> findByCustomerId(UUID customerId);
     List<Order> findByFloristId(UUID floristId);
+    List<Order> findRecent(int limit);
 }
