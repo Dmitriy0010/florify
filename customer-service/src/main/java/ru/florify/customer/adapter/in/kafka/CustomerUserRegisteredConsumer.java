@@ -25,14 +25,13 @@ public class CustomerUserRegisteredConsumer {
     private final CustomerRepository customerRepository;
 
     @KafkaListener(topics = "auth.user.registered", groupId = "customer-service")
-    public void consume(UserRegisteredEvent event, Acknowledgment ack) {
+    public void consume(UserRegisteredEvent event) {
         log.info("Consumed UserRegisteredEvent for userId: {}", event.userId());
 
         try {
             // Only create profiles for CUSTOMERS
             if (!"CUSTOMER".equalsIgnoreCase(event.role())) {
                 log.debug("Skipping UserRegisteredEvent for non-CUSTOMER role: {}", event.role());
-                ack.acknowledge();
                 return;
             }
 
@@ -58,11 +57,10 @@ public class CustomerUserRegisteredConsumer {
                     ));
                 }
             );
-
-            ack.acknowledge();
         } catch (Exception e) {
             log.error("Failed to process UserRegisteredEvent for userId: {}", event.userId(), e);
-            // ErrorHandler will handle retries and DLQ
+            throw e; // Rethrow to allow retry/DLQ
         }
     }
+
 }

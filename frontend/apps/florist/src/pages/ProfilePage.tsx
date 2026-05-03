@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -14,6 +13,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useShiftStore } from '../store/shiftStore';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -21,32 +21,26 @@ import { timesheetApi } from '../lib/timesheetApi';
 
 export default function ProfilePage() {
   const { displayName, roles, userId, logout } = useAuthStore();
+  const { isShiftOpen, shiftStart: shiftStartIso, openShift, closeShift } = useShiftStore();
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const [shiftStart, setShiftStart] = useState<Date | null>(() => {
-    const s = localStorage.getItem('florify_shift_start');
-    return s ? new Date(s) : null;
-  });
-
-  const shiftActive = !!shiftStart;
+  const shiftActive = isShiftOpen;
+  const shiftStart = shiftStartIso ? new Date(shiftStartIso) : null;
   const today = format(new Date(), 'EEEE, d MMMM', { locale: ru });
 
   /* mutations */
   const startShift = useMutation({
     mutationFn: () => timesheetApi.checkin(userId ?? '').catch(() => ({ time: new Date().toISOString() })),
     onSuccess: () => {
-      const now = new Date();
-      setShiftStart(now);
-      localStorage.setItem('florify_shift_start', now.toISOString());
+      openShift(new Date().toISOString());
     },
   });
 
   const endShift = useMutation({
     mutationFn: () => timesheetApi.checkout(userId ?? '').catch(() => ({ time: new Date().toISOString() })),
     onSuccess: () => {
-      setShiftStart(null);
-      localStorage.removeItem('florify_shift_start');
+      closeShift();
     },
   });
 

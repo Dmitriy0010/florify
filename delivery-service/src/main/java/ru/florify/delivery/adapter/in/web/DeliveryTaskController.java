@@ -56,10 +56,12 @@ public class DeliveryTaskController {
             tasks = taskRepository.findByStatusAndDate(status, date).stream()
                     .map(mapper::toResponse).toList();
         } else {
-            // По умолчанию — задачи на сегодня в статусе CREATED и ASSIGNED
+            // По умолчанию — активные задачи на сегодня (CREATED, ASSIGNED, PICKED_UP)
             LocalDate queryDate = (date != null) ? date : LocalDate.now();
-            tasks = taskRepository.findByStatusAndDate(TaskStatus.CREATED, queryDate).stream()
-                    .map(mapper::toResponse).toList();
+            tasks = taskRepository.findByStatusesAndDate(
+                    List.of(TaskStatus.CREATED, TaskStatus.ASSIGNED, TaskStatus.PICKED_UP),
+                    queryDate
+            ).stream().map(mapper::toResponse).toList();
         }
 
         return ResponseEntity.ok(tasks);
@@ -102,6 +104,19 @@ public class DeliveryTaskController {
                 throw new ru.florify.common.exception.ForbiddenException("Access denied: not your task");
             }
         }
+
+        return ResponseEntity.ok(mapper.toResponse(task));
+    }
+
+    @GetMapping("/order/{orderId}")
+    @Operation(summary = "Get delivery task by order ID")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','COURIER','FLORIST')")
+    public ResponseEntity<DeliveryTaskResponse> getByOrderId(
+            @PathVariable UUID orderId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        var task = taskRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ru.florify.delivery.domain.exception.DeliveryTaskNotFoundException(orderId));
 
         return ResponseEntity.ok(mapper.toResponse(task));
     }

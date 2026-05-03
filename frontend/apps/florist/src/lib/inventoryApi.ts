@@ -29,4 +29,43 @@ export const inventoryApi = {
     const { data } = await apiClient.post('/v1/inventory/write-off', payload);
     return data;
   },
+  /**
+   * Inventory audit: set absolute quantity for a product.
+   * Calculates the difference vs current balance and posts a write-off or receipt.
+   */
+  adjustBalance: async (payload: { productId: string; targetQuantity: number; currentQuantity: number; reason?: string }) => {
+    const diff = payload.targetQuantity - payload.currentQuantity;
+    if (diff === 0) return;
+
+    if (diff < 0) {
+      // Need to write off
+      const { data } = await apiClient.post('/v1/inventory/write-off', {
+        productId: payload.productId,
+        quantity: Math.abs(diff),
+        type: 'AUDIT',
+        reason: payload.reason || 'Инвентаризация',
+      });
+      return data;
+    } else {
+      // Need to add stock — try a receipt endpoint, fallback to write-off negative
+      try {
+        const { data } = await apiClient.post('/v1/inventory/receive', {
+          productId: payload.productId,
+          quantity: diff,
+          type: 'AUDIT',
+          reason: payload.reason || 'Инвентаризация',
+        });
+        return data;
+      } catch {
+        // Fallback: use adjust endpoint
+        const { data } = await apiClient.post('/v1/inventory/adjust', {
+          productId: payload.productId,
+          quantity: diff,
+          reason: payload.reason || 'Инвентаризация',
+        });
+        return data;
+      }
+    }
+  },
 };
+

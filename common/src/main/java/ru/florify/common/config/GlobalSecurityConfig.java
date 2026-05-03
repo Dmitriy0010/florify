@@ -47,6 +47,7 @@ public class GlobalSecurityConfig {
                         .requestMatchers("/api/v1/payments/webhooks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/stores", "/api/v1/stores/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/delivery/slots").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/{id}").permitAll()

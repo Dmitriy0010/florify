@@ -14,6 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class OrderFact {
+    private UUID id;
     @EqualsAndHashCode.Include
     private UUID orderId; // Unique for idempotency
     private UUID storeId;

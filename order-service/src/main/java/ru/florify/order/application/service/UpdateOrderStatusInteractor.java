@@ -54,6 +54,9 @@ public class UpdateOrderStatusInteractor implements UpdateOrderStatusUseCase {
             order = order.complete(command.floristId(), now);
         } else {
             order = order.transitionToStatus(command.newStatus(), now);
+            if (command.floristId() != null) {
+                order = order.toBuilder().floristId(command.floristId()).build();
+            }
         }
         
         Order savedOrder = orderRepository.save(order);
@@ -160,6 +163,7 @@ public class UpdateOrderStatusInteractor implements UpdateOrderStatusUseCase {
                             command.newStatus().name(),
                             savedOrder.getDeliveryAddress(),
                             savedOrder.getType().name(),
+                            savedOrder.getDeliverySlotId(),
                             savedOrder.getCustomerId(),
                             now
                     )

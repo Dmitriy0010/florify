@@ -3,14 +3,32 @@ import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/store/cartStore'
 import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { loyaltyApi } from '@/api/loyalty'
 
 export function CartPage() {
   const navigate = useNavigate()
   const { items, updateQuantity, removeItem, getTotalPrice } = useCartStore()
   
+  const { data: account } = useQuery({
+    queryKey: ['loyalty-account'],
+    queryFn: () => loyaltyApi.getMyAccount(),
+    retry: false,
+  })
+
+  const { data: tiers } = useQuery({
+    queryKey: ['loyalty-tiers'],
+    queryFn: () => loyaltyApi.getTiers(),
+    retry: false,
+  })
+  
+  const currentTierInfo = tiers?.find(t => t.tier === account?.tier)
+  const discountPercent = currentTierInfo?.discountPercent || 0
+  
   const subtotal = getTotalPrice()
-  const shipping = subtotal > 5000 ? 0 : 500
-  const total = subtotal + shipping
+  const discountAmount = Math.floor((subtotal * discountPercent) / 100)
+  const shipping = (subtotal - discountAmount) > 5000 ? 0 : 500
+  const total = subtotal - discountAmount + shipping
 
   if (items.length === 0) {
     return (
@@ -35,6 +53,13 @@ export function CartPage() {
     )
   }
 
+  const fallbackImage = "https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?q=80&w=600&auto=format&fit=crop"
+  const getImageUrl = (url: string | null | undefined) => {
+    if (!url) return fallbackImage;
+    if (url.startsWith('http') || url.startsWith('/')) return url;
+    return `/api/v1/media/${url}`;
+  };
+
   return (
     <div className="container-custom py-12 md:py-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <h1 className="text-4xl font-display font-bold mb-12 tracking-tight">Ваша корзина</h1>
@@ -45,18 +70,21 @@ export function CartPage() {
           {items.map((item) => (
             <div 
               key={item.productId} 
-              className="group flex flex-col sm:flex-row gap-6 pb-8 border-b border-gray-100 last:border-0 transition-all hover:bg-neutral-50/30 p-4 rounded-3xl"
+              className="group flex flex-col sm:flex-row gap-6 pb-8 border-b border-gray-100 last:border-0 transition-all hover:bg-neutral-50/50 p-5 rounded-[2rem]"
             >
               {/* Product Image */}
-              <div className="h-40 w-full sm:w-40 rounded-2xl overflow-hidden bg-gray-100 shrink-0 shadow-sm transition-transform group-hover:scale-[1.02] duration-500">
+              <div className="h-44 w-full sm:w-44 rounded-[1.5rem] overflow-hidden bg-neutral-100 shrink-0 shadow-sm transition-transform group-hover:scale-[1.02] duration-500 relative">
                 <img 
-                  src={item.image || 'https://images.unsplash.com/photo-1548510318-920d7722a10f?auto=format&fit=crop&q=80&w=200'} 
+                  src={getImageUrl(item.image)} 
                   alt={item.name} 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = fallbackImage
+                  }}
                   className="h-full w-full object-cover"
                 />
               </div>
               
-              <div className="flex-1 flex flex-col justify-between">
+              <div className="flex-1 flex flex-col justify-between py-2">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
                     <h3 className="text-xl font-semibold leading-snug group-hover:text-[var(--color-brand)] transition-colors">
@@ -125,6 +153,13 @@ export function CartPage() {
                 </span>
               </div>
               
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm font-medium text-rose-500">
+                  <span>Скидка ({discountPercent}% по лояльности):</span>
+                  <span className="font-bold">-{discountAmount} ₽</span>
+                </div>
+              )}
+              
               <div className="pt-6 border-t border-dashed border-gray-200 flex justify-between items-end">
                 <span className="text-sm font-bold uppercase tracking-widest text-neutral-400">Итого:</span>
                 <span className="text-3xl font-display font-black text-[var(--color-text-primary)]">
@@ -142,7 +177,8 @@ export function CartPage() {
             </Button>
             
             <div className="bg-neutral-50 rounded-2xl p-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-relaxed text-center">
-              Бесплатная доставка при заказе от 5,000 ₽ • Начисление бонусов (3%)
+              Бесплатная доставка при заказе от 5,000 ₽
+              {currentTierInfo?.pointsPerHundred ? ` • Начисление кешбэка (${currentTierInfo.pointsPerHundred}%)` : ''}
             </div>
           </div>
         </div>

@@ -61,7 +61,14 @@ public class DeliveryTaskPersistenceAdapter implements DeliveryTaskRepository {
 
     @Override
     public List<DeliveryTask> findByStatusAndDate(TaskStatus status, LocalDate date) {
-        return jpaRepository.findByStatusAndSlotDate(status, date).stream()
+        return jpaRepository.findByStatusesAndSlotDate(List.of(status), date).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<DeliveryTask> findByStatusesAndDate(java.util.Collection<TaskStatus> statuses, LocalDate date) {
+        return jpaRepository.findByStatusesAndSlotDate(statuses, date).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

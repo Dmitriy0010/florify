@@ -17,7 +17,7 @@ public class CustomerOrderCompletedConsumer {
     private final ConfirmPointsUseCase confirmPointsUseCase;
 
     @KafkaListener(topics = "orders.order.completed", groupId = "customer-service")
-    public void consume(OrderCompletedEvent event, Acknowledgment ack) {
+    public void consume(OrderCompletedEvent event) {
         log.info("Consumed OrderCompletedEvent for order: {}", event.orderId());
 
         try {
@@ -28,10 +28,10 @@ public class CustomerOrderCompletedConsumer {
                 event.finalAmount(),
                 event.floristId()
             ));
-
-            ack.acknowledge();
         } catch (Exception e) {
             log.error("Failed to process OrderCompletedEvent for order: {}", event.orderId(), e);
+            throw e;
         }
     }
+
 }
