@@ -57,7 +57,7 @@ class UpdateTaskStatusInteractorTest {
                 .status(status)
                 .createdAt(now)
                 .updatedAt(now)
-                .version(0)
+                
                 .build();
     }
 
@@ -90,7 +90,7 @@ class UpdateTaskStatusInteractorTest {
                 .id(slotId)
                 .maxCapacity(5)
                 .currentLoad(1)
-                .version(0)
+                
                 .build();
 
         when(taskRepository.findById(task.getId())).thenReturn(Optional.of(task));
