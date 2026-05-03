@@ -117,7 +117,7 @@ class LoyaltyAccountTest {
             .pointsBalance(0)
             .reservedPoints(0)
             .totalSpent(BigDecimal.ZERO)
-            .version(0)
+            
             .createdAt(Instant.now())
             .updatedAt(Instant.now())
             .build();

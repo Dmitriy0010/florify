@@ -129,7 +129,7 @@ jobs:
         run: pnpm lint || echo "Lint failed but continuing for now"
 
       - name: Build
-        run: pnpm build
+        run: pnpm exec vite build
 
   # ─────────────────────────────────────────────
   #  Frontend — Florist PWA (Vite + TypeScript)
@@ -179,7 +179,7 @@ jobs:
         run: pnpm lint || echo "Lint failed but continuing for now"
 
       - name: Build
-        run: pnpm build
+        run: pnpm exec vite build
 
   # ─────────────────────────────────────────────
   #  Frontend — Admin panel (Vite + TypeScript)
@@ -229,4 +229,4 @@ jobs:
         run: pnpm lint || echo "Lint failed but continuing for now"
 
       - name: Build
-        run: pnpm build
+        run: pnpm exec vite build

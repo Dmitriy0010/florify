@@ -55,6 +55,7 @@ class MarkBatchesAsExpiredInteractorTest {
         StockBatch batch1 = StockBatch.builder()
                 .id(UUID.randomUUID())
                 .productId(productId)
+                .storeId(UUID.randomUUID())
                 .quantityRemaining(new BigDecimal("10.00"))
                 .expiresAt(now.minusSeconds(1))
                 .status(BatchStatus.AVAILABLE)
@@ -64,15 +65,16 @@ class MarkBatchesAsExpiredInteractorTest {
         StockBatch batch2 = StockBatch.builder()
                 .id(UUID.randomUUID())
                 .productId(productId)
+                .storeId(UUID.randomUUID())
                 .quantityRemaining(new BigDecimal("5.00"))
                 .expiresAt(now.minusSeconds(100))
                 .status(BatchStatus.AVAILABLE)
                 .build();
 
-        StockBalance existingBalance = new StockBalance(UUID.randomUUID(), productId, new BigDecimal("100.00"), new BigDecimal("10.00"), 0);
+        StockBalance existingBalance = new StockBalance(UUID.randomUUID(), productId, UUID.randomUUID(), new BigDecimal("100.00"), new BigDecimal("10.00"));
 
         when(stockBatchRepository.findExpiredBatches(now)).thenReturn(List.of(batch1, batch2));
-        when(balanceLookup.findByProductId(productId)).thenReturn(Optional.of(existingBalance));
+        when(balanceLookup.findByProductIdAndStoreId(productId, batch1.getStoreId())).thenReturn(Optional.of(existingBalance));
 
         int result = interactor.execute();
 

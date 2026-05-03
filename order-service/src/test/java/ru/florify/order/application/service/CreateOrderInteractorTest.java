@@ -64,6 +64,7 @@ class CreateOrderInteractorTest {
                 OrderSource.WEB,         // source
                 PaymentMethod.CASH,      // paymentMethod
                 "idemp-123",             // idempotencyKey
+                null,                    // status
                 null,                    // deliveryAddress
                 null,                    // deliverySlotId
                 null                     // deliveryZoneId

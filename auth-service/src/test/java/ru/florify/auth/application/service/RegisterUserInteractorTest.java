@@ -62,7 +62,7 @@ class RegisterUserInteractorTest {
     @DisplayName("Should successfully register user, save tokens and publish event")
     void shouldRegisterSuccessfully() {
         // Given
-        var command = new RegisterUserCommand("test@email.com", "pass123", "123", "F", "L", "dev");
+        var command = new RegisterUserCommand("test@email.com", "pass123", "123", "F", "L", "dev", "CUSTOMER");
         when(userRepository.existsByEmail(any())).thenReturn(false);
         when(passwordHasher.hash("pass123")).thenReturn("hashedPass");
         when(userRepository.save(any())).thenAnswer(I -> I.getArgument(0));
@@ -83,7 +83,7 @@ class RegisterUserInteractorTest {
     @Test
     @DisplayName("Should throw ConflictException when email exists")
     void shouldThrowConflictWhenEmailExists() {
-        var command = new RegisterUserCommand("taken@email.com", "pass", null, "F", "L", "dev");
+        var command = new RegisterUserCommand("taken@email.com", "pass", null, "F", "L", "dev", "CUSTOMER");
         when(userRepository.existsByEmail("taken@email.com")).thenReturn(true);
 
         assertThrows(ConflictException.class, () -> interactor.execute(command));

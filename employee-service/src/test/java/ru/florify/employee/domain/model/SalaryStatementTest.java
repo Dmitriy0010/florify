@@ -26,7 +26,7 @@ class SalaryStatementTest {
                 .deductions(BigDecimal.ZERO)
                 .totalPayout(BigDecimal.TEN)
                 .status(PaymentStatus.DRAFT)
-                .version(0)
+                
                 .build();
 
         SalaryStatement approved = statement.approve(UUID.randomUUID());

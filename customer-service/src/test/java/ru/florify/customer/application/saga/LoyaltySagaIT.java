@@ -62,7 +62,7 @@ class LoyaltySagaIT extends BaseIntegrationTest {
                 .pointsBalance(100)
                 .reservedPoints(0)
                 .totalSpent(BigDecimal.ZERO)
-                .version(0)
+                
                 .createdAt(Instant.now())
                 .build());
 

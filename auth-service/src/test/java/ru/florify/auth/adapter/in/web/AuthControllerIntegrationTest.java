@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -35,8 +36,8 @@ class AuthControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
-    private AuthEventPublisher AuthEventPublisher;
+    @MockitoBean
+    private AuthEventPublisher authEventPublisher;
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -62,7 +63,7 @@ class AuthControllerIntegrationTest {
         String pass = "pass12345";
 
         // 1. Register
-        var regReq = new RegisterRequest(email, pass, null, "John", "Doe", "test-device");
+        var regReq = new RegisterRequest(email, pass, null, "John", "Doe", "test-device", "CUSTOMER");
         String regResponse = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(regReq)))

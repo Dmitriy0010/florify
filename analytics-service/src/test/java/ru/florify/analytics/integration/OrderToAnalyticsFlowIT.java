@@ -40,6 +40,7 @@ public class OrderToAnalyticsFlowIT {
                 storeId,
                 new BigDecimal("1500.00"),
                 new BigDecimal("1000.00"),
+                java.util.Collections.emptyList(),
                 Instant.now()
         );
 
@@ -48,11 +49,11 @@ public class OrderToAnalyticsFlowIT {
 
         // Then - using await because OrderEventListener might be @Async
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
-            assertThat(orderFactRepository.findById(orderId)).isPresent();
+            assertThat(orderFactRepository.findByOrderId(orderId)).isPresent();
         });
         
-        var fact = orderFactRepository.findById(orderId).get();
+        var fact = orderFactRepository.findByOrderId(orderId).get();
         assertThat(fact.getTotalAmount()).isEqualByComparingTo("1500.00");
-        assertThat(fact.getTotalCogs()).isEqualByComparingTo("1000.00");
+        assertThat(fact.getCogsAmount()).isEqualByComparingTo("1000.00");
     }
 }
