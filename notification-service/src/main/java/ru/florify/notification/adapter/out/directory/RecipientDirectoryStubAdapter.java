@@ -18,14 +18,18 @@ public class RecipientDirectoryStubAdapter implements RecipientDirectoryPort {
 
     @Override
     public Optional<String> getEmail(UUID recipientId) {
-        return stubEmail == null || stubEmail.isBlank() ? Optional.empty() : Optional.of(stubEmail);
+        if (stubEmail == null || stubEmail.isBlank()) {
+            return Optional.of("customer-" + recipientId.toString().substring(0, 8) + "@example.com");
+        }
+        return Optional.of(stubEmail);
     }
 
     @Override
     public Optional<String> getTelegramChatId(UUID recipientId) {
-        return stubTelegramChatId == null || stubTelegramChatId.isBlank()
-                ? Optional.empty()
-                : Optional.of(stubTelegramChatId);
+        if (stubTelegramChatId == null || stubTelegramChatId.isBlank()) {
+            return Optional.of("stub-chat-id-" + recipientId.toString().substring(0, 8));
+        }
+        return Optional.of(stubTelegramChatId);
     }
 }
 

@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { 
   MoreVertical, 
   RotateCcw,
@@ -323,7 +324,19 @@ function CalendarView({ onOrderClick }: { onOrderClick: (id: string) => void }) 
 
 // --- Main Page ---
 export default function OrdersPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const orderId = searchParams.get('id')
+    if (orderId) {
+      setSelectedOrderId(orderId)
+      // Clear the param after opening to avoid re-opening on every render if state changes
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('id')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   
   return (
     <div className="h-full flex flex-col overflow-hidden animate-in fade-in duration-500">

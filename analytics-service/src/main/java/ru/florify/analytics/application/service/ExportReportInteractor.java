@@ -22,6 +22,7 @@ public class ExportReportInteractor implements ExportReportUseCase {
     private final OrderFactRepository orderRepository;
     private final PurchaseFactRepository purchaseRepository;
     private final SalaryFactRepository salaryRepository;
+    private final ru.florify.analytics.application.port.out.WriteoffFactRepository writeoffRepository;
     private final ReportExportPort exportPort;
 
     @Override
@@ -47,9 +48,18 @@ public class ExportReportInteractor implements ExportReportUseCase {
                 );
                 yield new ExportReportData(ReportType.PNL, query.from(), query.to(), null, null, pnl);
             }
-            case INVENTORY -> new ExportReportData(ReportType.INVENTORY, query.from(), query.to(), null, null, null); // Simplified
+            case INVENTORY -> {
+                ru.florify.analytics.application.result.InventoryStatsResult invStats = writeoffRepository.aggregateInventoryStats(
+                        query.from().atStartOfDay(java.time.ZoneOffset.UTC).toInstant()
+                );
+                yield new ExportReportData(ReportType.INVENTORY, query.from(), query.to(), null, invStats, null);
+            }
         };
 
-        return exportPort.generateExcel(data);
+        if ("EXCEL".equalsIgnoreCase(query.format())) {
+            return exportPort.generateExcel(data);
+        } else {
+            return exportPort.generatePdf(data);
+        }
     }
 }

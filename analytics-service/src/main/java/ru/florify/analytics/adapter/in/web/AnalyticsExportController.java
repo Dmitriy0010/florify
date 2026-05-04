@@ -29,12 +29,22 @@ public class AnalyticsExportController {
     public ResponseEntity<byte[]> export(
             @RequestParam ReportType report,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "PDF") String format
     ) {
-        byte[] file = exportReportUseCase.exportReport(new ExportReportQuery(report, from, to));
+        byte[] file = exportReportUseCase.exportReport(new ExportReportQuery(report, from, to, format));
+        
+        String extension = "EXCEL".equalsIgnoreCase(format) ? "xlsx" : "pdf";
+        String contentType = "EXCEL".equalsIgnoreCase(format) 
+            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+            : "application/pdf";
+            
+        String filename = String.format("%s_report_%s_%s.%s", 
+            report.name().toLowerCase(), from, to, extension);
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=analytics-report.xlsx")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(MediaType.parseMediaType(contentType))
                 .body(file);
     }
 }

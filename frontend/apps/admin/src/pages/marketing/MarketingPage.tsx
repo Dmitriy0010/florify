@@ -14,11 +14,13 @@ import {
   Activity,
   Filter,
   X,
-  MoreVertical
+  MoreVertical,
+  Users
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { NotificationTemplate, NotificationService, NotificationLog } from '@/lib/api'
+import { NotificationTemplate, NotificationService, NotificationLog, CustomerService, CustomerSummary } from '@/lib/api'
 import { TemplateEditModal } from '@/components/marketing/TemplateEditModal'
+import { SendBlastModal } from '@/components/marketing/SendBlastModal'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -164,19 +166,85 @@ function LogRow({ log, idx }: { log: NotificationLog; idx: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main Page
+// Customer Row (for Mailing)
 // ─────────────────────────────────────────────────────────────────────────────
+function CustomerRow({ 
+  customer, 
+  selected, 
+  onToggle, 
+  idx 
+}: { 
+  customer: CustomerSummary; 
+  selected: boolean; 
+  onToggle: () => void;
+  idx: number 
+}) {
+  return (
+    <div 
+      className={cn(
+        'grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-neutral-50/60 transition-colors cursor-pointer group',
+        idx % 2 === 1 ? 'bg-neutral-50/20' : 'bg-white',
+        selected && 'bg-emerald-50/30'
+      )}
+      onClick={onToggle}
+    >
+      <div className="col-span-1 flex justify-center">
+        <div className={cn(
+          'w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center',
+          selected 
+            ? 'bg-neutral-900 border-neutral-900 text-white' 
+            : 'border-neutral-200 group-hover:border-neutral-400'
+        )}>
+          {selected && <CheckCircle2 size={12} className="stroke-[3]" />}
+        </div>
+      </div>
+      <div className="col-span-4">
+        <p className="text-sm font-black text-neutral-900">{customer.firstName} {customer.lastName}</p>
+        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-0.5">#{customer.id?.slice(0, 8)}</p>
+      </div>
+      <div className="col-span-4">
+        <div className="flex flex-col gap-0.5">
+          {customer.phone && (
+            <p className="text-xs font-bold text-neutral-600 flex items-center gap-1.5">
+              <span className="text-[10px] text-neutral-300">📞</span> {customer.phone}
+            </p>
+          )}
+          {customer.email && (
+            <p className="text-xs font-bold text-neutral-400 flex items-center gap-1.5">
+              <span className="text-[10px] text-neutral-300">✉️</span> {customer.email}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="col-span-3 flex justify-end">
+        <div className="bg-neutral-50 px-3 py-1.5 rounded-xl border border-neutral-100 flex flex-col items-end">
+          <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Бонусы</p>
+          <p className="text-xs font-black text-neutral-900 leading-none">{(customer as any).loyaltyPoints || 0} ✨</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 export default function MarketingPage() {
-  const [activeTab, setActiveTab] = useState<'templates' | 'logs'>('templates')
+  const [activeTab, setActiveTab] = useState<'clients' | 'templates' | 'logs'>('clients')
   const [selectedTemplate, setSelectedTemplate] = useState<NotificationTemplate | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [isBlastOpen, setIsBlastOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [channelFilter, setChannelFilter] = useState('')
+  
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set())
 
   const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
     queryKey: ['notification-templates'],
     queryFn: () => NotificationService.getTemplates().then(r => r.data),
   })
+
+  const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ['mailing-customers', search],
+    queryFn: () => CustomerService.list({ size: 100, phone: search }).then(r => r.data),
+  })
+  const customers: CustomerSummary[] = customersData?.content || []
 
   const { data: logsData, isLoading: isLoadingLogs } = useQuery({
     queryKey: ['notification-logs'],
@@ -228,10 +296,20 @@ export default function MarketingPage() {
           </select>
 
           <div className="w-px h-6 bg-neutral-100" />
-          <button onClick={() => { setIsCreating(true); setSelectedTemplate(null) }}
-            className="h-10 px-5 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-black/10 active:scale-95">
-            <Plus size={16} /> Новый шаблон
-          </button>
+          {activeTab === 'clients' ? (
+            <button 
+              onClick={() => setIsBlastOpen(true)}
+              disabled={selectedCustomerIds.size === 0}
+              className="h-10 px-5 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-black/10 active:scale-95 disabled:opacity-50 disabled:bg-neutral-200 disabled:shadow-none"
+            >
+              <Send size={16} /> Создать рассылку ({selectedCustomerIds.size})
+            </button>
+          ) : (
+            <button onClick={() => { setIsCreating(true); setSelectedTemplate(null) }}
+              className="h-10 px-5 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-black/10 active:scale-95">
+              <Plus size={16} /> Новый шаблон
+            </button>
+          )}
         </div>
       </div>
 
@@ -248,32 +326,40 @@ export default function MarketingPage() {
               { label: 'Email',          value: emailCount,       icon: Mail },
               { label: 'Telegram',       value: tgCount,          icon: MessageSquare },
             ].map(({ label, value, icon: Icon }) => (
-              <div key={label} className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-                <div className="flex items-center gap-2">
-                  <Icon size={13} className="text-neutral-400" />
-                  <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">{label}</span>
+              <button 
+                key={label} 
+                onClick={() => setActiveTab('templates')}
+                className="w-full flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-100 hover:border-neutral-300 hover:bg-white transition-all group/stat"
+              >
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Icon size={14} className="text-neutral-400 shrink-0 group-hover/stat:text-neutral-900 transition-colors" />
+                  <span className="text-[10px] font-black text-neutral-600 uppercase tracking-tight truncate group-hover/stat:text-neutral-900 transition-colors">{label}</span>
                 </div>
                 <span className="text-sm font-black text-neutral-900">{value}</span>
-              </div>
+              </button>
             ))}
           </div>
 
           {/* Logs stat */}
           <div className="p-5 border-b border-neutral-50">
             <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-3">Журнал</p>
-            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+            <button 
+              onClick={() => setActiveTab('logs')}
+              className="w-full p-3 bg-neutral-50 rounded-xl border border-neutral-100 hover:border-neutral-300 hover:bg-white transition-all group/journal text-left"
+            >
               <div className="flex items-center gap-2 mb-1">
-                <Activity size={13} className="text-neutral-400" />
-                <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">Отправлено сегодня</span>
+                <Activity size={14} className="text-neutral-400 shrink-0 group-hover/journal:text-neutral-900 transition-colors" />
+                <span className="text-[10px] font-black text-neutral-600 uppercase tracking-tight truncate group-hover/journal:text-neutral-900 transition-colors">Отправлено сегодня</span>
               </div>
               <p className="text-xl font-black text-neutral-900">{sentToday}</p>
-            </div>
+            </button>
           </div>
 
           {/* Nav */}
           <div className="p-4 space-y-1">
             <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-3">Разделы</p>
             {[
+              { id: 'clients',   label: 'Клиенты', icon: Users },
               { id: 'templates', label: 'Шаблоны', icon: Bell },
               { id: 'logs',      label: 'Журнал доставки', icon: Activity },
             ].map(({ id, label, icon: Icon }) => (
@@ -290,8 +376,65 @@ export default function MarketingPage() {
         </div>
 
         {/* ── Main content ─────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-auto custom-scrollbar">
-          {activeTab === 'templates' ? (
+        <div className="flex-1 overflow-auto bg-white">
+          {activeTab === 'clients' ? (
+            <>
+              {/* Clients table header */}
+              <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50 grid grid-cols-12 gap-4 sticky top-0 z-10 bg-white">
+                <div className="col-span-1 flex justify-center">
+                  <button 
+                    onClick={() => {
+                      if (selectedCustomerIds.size === customers.length) {
+                        setSelectedCustomerIds(new Set())
+                      } else {
+                        setSelectedCustomerIds(new Set(customers.map(c => c.id!)))
+                      }
+                    }}
+                    className={cn(
+                      'w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all',
+                      selectedCustomerIds.size === customers.length && customers.length > 0
+                        ? 'bg-neutral-900 border-neutral-900 text-white' 
+                        : 'border-neutral-200 hover:border-neutral-400'
+                    )}
+                  >
+                    {selectedCustomerIds.size === customers.length && customers.length > 0 && <CheckCircle2 size={12} className="stroke-[3]" />}
+                  </button>
+                </div>
+                <div className="col-span-4 text-[9px] font-black text-neutral-400 uppercase tracking-widest">Клиент</div>
+                <div className="col-span-4 text-[9px] font-black text-neutral-400 uppercase tracking-widest">Контакты</div>
+                <div className="col-span-3 text-[9px] font-black text-neutral-400 uppercase tracking-widest text-right">Статус лояльности</div>
+              </div>
+
+              {isLoadingCustomers ? (
+                <div className="py-32 flex items-center justify-center">
+                  <Loader2 className="animate-spin text-neutral-200" size={36} />
+                </div>
+              ) : customers.length === 0 ? (
+                <div className="py-32 flex flex-col items-center gap-4">
+                  <Users size={28} className="text-neutral-200" />
+                  <p className="text-[10px] font-black text-neutral-300 uppercase tracking-widest">Клиенты не найдены</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-50">
+                  {customers.map((c, idx) => (
+                    <CustomerRow 
+                      key={c.id} 
+                      customer={c} 
+                      idx={idx}
+                      selected={selectedCustomerIds.has(c.id!)}
+                      onToggle={(e) => {
+                        e.stopPropagation()
+                        const next = new Set(selectedCustomerIds)
+                        if (next.has(c.id!)) next.delete(c.id!)
+                        else next.add(c.id!)
+                        setSelectedCustomerIds(next)
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : activeTab === 'templates' ? (
             <>
               {/* Table header */}
               <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/50 grid grid-cols-12 gap-4 sticky top-0 z-10 bg-white">
@@ -379,6 +522,19 @@ export default function MarketingPage() {
         <TemplateEditModal
           template={selectedTemplate ?? undefined}
           onClose={() => { setSelectedTemplate(null); setIsCreating(false) }}
+        />
+      )}
+
+      {isBlastOpen && (
+        <SendBlastModal
+          selectedCustomers={customers.filter(c => selectedCustomerIds.has(c.id!))}
+          templates={templates}
+          onClose={() => setIsBlastOpen(false)}
+          onSuccess={() => {
+            setIsBlastOpen(false)
+            setSelectedCustomerIds(new Set())
+            setActiveTab('logs')
+          }}
         />
       )}
     </div>
