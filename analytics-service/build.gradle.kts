@@ -20,6 +20,7 @@ dependencies {
     runtimeOnly(libs.postgresql)
 
     implementation("org.apache.poi:poi-ooxml:5.3.0")
+    implementation("com.github.librepdf:openpdf:2.0.3")
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.spring.security.test)

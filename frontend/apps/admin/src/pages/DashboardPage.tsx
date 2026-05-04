@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ShoppingBag, ArrowUpRight, ArrowDownRight, Flower2, Wallet, Target, Loader2, Clock, ChevronRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDashboardStore } from '@/store/useDashboardStore'
@@ -9,6 +9,7 @@ import { InventoryService, OrderService, AnalyticsService, OrderResponse } from 
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Link } from 'react-router-dom'
+import { OrderDetailModal } from '@/components/orders/OrderDetailModal'
 
 // Custom Ruble Icon component
 function RubleIcon({ className }: { className?: string }) {
@@ -22,6 +23,7 @@ function RubleIcon({ className }: { className?: string }) {
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { stats, fetchDashboardData, isLoading, currentStoreId, stores, dateRange } = useDashboardStore()
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   
   const { data: prevStats } = useQuery({
     queryKey: ['dashboard-stats-prev', currentStoreId, dateRange],
@@ -180,7 +182,11 @@ export default function DashboardPage() {
                 ) : (
                   <div className="divide-y divide-neutral-50 px-2 pb-2">
                     {recentOrders.map(order => (
-                      <div key={order.id} className="p-4 flex items-center justify-between group hover:bg-neutral-50 transition-colors rounded-lg cursor-pointer">
+                      <div 
+                        key={order.id} 
+                        onClick={() => setSelectedOrderId(order.id || null)}
+                        className="p-4 flex items-center justify-between group hover:bg-neutral-50 transition-colors rounded-lg cursor-pointer"
+                      >
                          <div className="flex items-center gap-4">
                             <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-neutral-50 text-neutral-400 group-hover:bg-white group-hover:text-neutral-900 transition-all border border-transparent group-hover:border-neutral-100">
                                <ShoppingBag size={18} />
@@ -268,6 +274,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {selectedOrderId && (
+        <OrderDetailModal
+          orderId={selectedOrderId}
+          onClose={() => setSelectedOrderId(null)}
+        />
+      )}
     </div>
   )
 }

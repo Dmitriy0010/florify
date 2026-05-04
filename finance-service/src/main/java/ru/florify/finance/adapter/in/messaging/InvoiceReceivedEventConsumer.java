@@ -31,7 +31,7 @@ public class InvoiceReceivedEventConsumer {
                 FinancialType.PURCHASE_EXPENSE,
                 event.totalAmount().negate(), // Трата - отрицательное значение
                 event.invoiceId(),
-                "Purchase from supplier",
+                "Закупка у поставщика",
                 null,
                 event.occurredAt()
         ));

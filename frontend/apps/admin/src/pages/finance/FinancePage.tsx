@@ -17,6 +17,7 @@ import {
   DollarSign,
   AlertTriangle
 } from 'lucide-react'
+import { TransactionDetailModal } from '@/components/finance/TransactionDetailModal'
 import { useQuery } from '@tanstack/react-query'
 import { FinanceService, AnalyticsService } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -27,12 +28,21 @@ import { ru } from 'date-fns/locale'
 // Transaction type config
 // ─────────────────────────────────────────────────────────────────────────────
 const TX_TYPE_CONFIG: Record<string, { label: string; color: string; sign: '+' | '-'; bgColor: string }> = {
+  // Revenue
+  SALE:              { label: 'Продажа',    color: 'text-emerald-600', sign: '+', bgColor: 'bg-emerald-50 border-emerald-100' },
   REVENUE_SALE:      { label: 'Продажа',    color: 'text-emerald-600', sign: '+', bgColor: 'bg-emerald-50 border-emerald-100' },
-  EXPENSE_PURCHASE:  { label: 'Закупка',    color: 'text-red-500',     sign: '-', bgColor: 'bg-red-50 border-red-100' },
-  EXPENSE_SALARY:    { label: 'Зарплата',   color: 'text-violet-500',  sign: '-', bgColor: 'bg-violet-50 border-violet-100' },
-  EXPENSE_RENT:      { label: 'Аренда',     color: 'text-amber-600',   sign: '-', bgColor: 'bg-amber-50 border-amber-100' },
-  EXPENSE_MARKETING: { label: 'Маркетинг',  color: 'text-sky-500',     sign: '-', bgColor: 'bg-sky-50 border-sky-100' },
   REVENUE_REFUND:    { label: 'Возврат',    color: 'text-orange-500',  sign: '-', bgColor: 'bg-orange-50 border-orange-100' },
+  
+  // Expenses
+  PURCHASE_EXPENSE:  { label: 'Закупка',    color: 'text-red-500',     sign: '-', bgColor: 'bg-red-50 border-red-100' },
+  EXPENSE_PURCHASE:  { label: 'Закупка',    color: 'text-red-500',     sign: '-', bgColor: 'bg-red-50 border-red-100' },
+  SALARY_EXPENSE:    { label: 'Зарплата',   color: 'text-violet-500',  sign: '-', bgColor: 'bg-violet-50 border-violet-100' },
+  EXPENSE_SALARY:    { label: 'Зарплата',   color: 'text-violet-500',  sign: '-', bgColor: 'bg-violet-50 border-violet-100' },
+  RENT_EXPENSE:      { label: 'Аренда',     color: 'text-amber-600',   sign: '-', bgColor: 'bg-amber-50 border-amber-100' },
+  EXPENSE_RENT:      { label: 'Аренда',     color: 'text-amber-600',   sign: '-', bgColor: 'bg-amber-50 border-amber-100' },
+  MARKETING_EXPENSE: { label: 'Маркетинг',  color: 'text-sky-500',     sign: '-', bgColor: 'bg-sky-50 border-sky-100' },
+  EXPENSE_MARKETING: { label: 'Маркетинг',  color: 'text-sky-500',     sign: '-', bgColor: 'bg-sky-50 border-sky-100' },
+  WRITE_OFF_EXPENSE: { label: 'Списание',   color: 'text-neutral-500', sign: '-', bgColor: 'bg-neutral-50 border-neutral-200' },
   EXPENSE_WRITEOFF:  { label: 'Списание',   color: 'text-neutral-500', sign: '-', bgColor: 'bg-neutral-50 border-neutral-200' },
 }
 
@@ -106,11 +116,12 @@ function PnlBar({ label, value, max, color }: { label: string; value: number; ma
 export default function FinancePage() {
   const today = format(new Date(), 'yyyy-MM-dd')
   const [dateRange, setDateRange] = useState({
-    from: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+    from: format(subMonths(new Date(), 1), 'yyyy-MM-dd'),
     to: today
   })
   const [txSearch, setTxSearch] = useState('')
   const [txTypeFilter, setTxTypeFilter] = useState('')
+  const [selectedTx, setSelectedTx] = useState<any>(null)
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['finance-pnl', dateRange],
@@ -124,10 +135,12 @@ export default function FinancePage() {
   const allTransactions = txData?.content || []
 
   const transactions = useMemo(() => allTransactions.filter((tx: any) => {
+    const txDate = tx.occurredAt?.split('T')[0]
+    const isInRange = txDate >= dateRange.from && txDate <= dateRange.to
     const matchSearch = !txSearch || (tx.description || '').toLowerCase().includes(txSearch.toLowerCase())
     const matchType = !txTypeFilter || tx.type === txTypeFilter
-    return matchSearch && matchType
-  }), [allTransactions, txSearch, txTypeFilter])
+    return isInRange && matchSearch && matchType
+  }), [allTransactions, txSearch, txTypeFilter, dateRange])
 
   const revenue = report?.revenue || 0
   const grossProfit = report?.grossProfit || 0
@@ -285,7 +298,9 @@ export default function FinancePage() {
                   <select value={txTypeFilter} onChange={e => setTxTypeFilter(e.target.value)}
                     className="h-9 px-3 bg-neutral-50 border border-neutral-200 rounded-xl text-[10px] font-black text-neutral-500 outline-none appearance-none uppercase tracking-widest min-w-[130px]">
                     <option value="">Все типы</option>
-                    {Object.entries(TX_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    {Array.from(new Map(Object.entries(TX_TYPE_CONFIG).map(([k, v]) => [v.label, { k, label: v.label }])).values()).map(({ k, label }) => (
+                      <option key={k} value={k}>{label}</option>
+                    ))}
                   </select>
 
                   {/* Search */}
@@ -311,20 +326,33 @@ export default function FinancePage() {
                 <div className="divide-y divide-neutral-50">
                   {transactions.map((tx: any, idx: number) => {
                     const cfg = getTxConfig(tx.type)
+                    
+                    const russifyDescription = (desc: string) => {
+                      if (desc.includes('Revenue from order')) return desc.replace('Revenue from order', 'Выручка по заказу')
+                      if (desc.includes('COGS for order')) return desc.replace('COGS for order', 'Себестоимость заказа')
+                      if (desc.includes('Inventory loss')) return desc.replace('Inventory loss', 'Убыток от списания')
+                      if (desc.includes('Purchase from supplier')) return 'Закупка у поставщика'
+                      return desc
+                    }
+
                     return (
-                      <div key={tx.id} className={cn('grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-neutral-50/50 transition-colors', idx % 2 === 1 ? 'bg-neutral-50/20' : 'bg-white')}>
+                      <div 
+                        key={tx.id} 
+                        onClick={() => setSelectedTx(tx)}
+                        className={cn('grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-neutral-50/50 transition-colors cursor-pointer group', idx % 2 === 1 ? 'bg-neutral-50/20' : 'bg-white')}
+                      >
                         <div className="col-span-2">
-                          <span className={cn('px-2.5 py-1 rounded-lg border text-[8px] font-black uppercase tracking-widest', cfg.bgColor, cfg.color)}>
+                          <span className={cn('px-2.5 py-1 rounded-lg border text-[8px] font-black uppercase tracking-widest group-hover:scale-105 transition-transform inline-block', cfg.bgColor, cfg.color)}>
                             {cfg.label}
                           </span>
                         </div>
                         <div className="col-span-2">
                           <span className={cn('text-sm font-black tabular-nums', cfg.sign === '+' ? 'text-emerald-600' : 'text-red-500')}>
-                            {cfg.sign}{tx.amount.toLocaleString('ru')} ₽
+                            {cfg.sign}{Math.abs(tx.amount).toLocaleString('ru')} ₽
                           </span>
                         </div>
                         <div className="col-span-6">
-                          <p className="text-xs font-bold text-neutral-600 truncate">{tx.description || 'Без описания'}</p>
+                          <p className="text-xs font-bold text-neutral-600 truncate">{russifyDescription(tx.description) || 'Без описания'}</p>
                         </div>
                         <div className="col-span-2 text-right">
                           <span className="text-[10px] font-black text-neutral-400 tabular-nums">
@@ -358,6 +386,14 @@ export default function FinancePage() {
           <ArrowUpRight size={14} /> Экспорт P&L
         </button>
       </div>
+
+      {selectedTx && (
+        <TransactionDetailModal
+          transaction={selectedTx}
+          typeConfig={getTxConfig(selectedTx.type)}
+          onClose={() => setSelectedTx(null)}
+        />
+      )}
     </div>
   )
 }

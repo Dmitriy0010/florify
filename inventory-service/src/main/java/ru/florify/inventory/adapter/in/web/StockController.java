@@ -28,6 +28,7 @@ public class StockController {
     private final ReceiveStockUseCase receiveStockUseCase;
     private final WriteOffStockUseCase writeOffStockUseCase;
     private final GetStockBalanceUseCase getStockBalanceUseCase;
+    private final ru.florify.inventory.application.port.in.GetStockTransactionUseCase getStockTransactionUseCase;
     private final ru.florify.inventory.application.port.in.GetAllStockBalancesUseCase getAllStockBalancesUseCase;
     private final ru.florify.inventory.application.port.in.GetWriteOffLogsUseCase getWriteOffLogsUseCase;
     private final ru.florify.inventory.application.port.in.GetProductHistoryUseCase getProductHistoryUseCase;
@@ -121,5 +122,12 @@ public class StockController {
                 ))
                 .toList();
         return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/transaction/{transactionId}")
+    @Operation(summary = "Get single transaction", description = "Retrieves details of a specific stock transaction by its ID.")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'FLORIST')")
+    public ResponseEntity<ru.florify.inventory.domain.model.StockTransaction> getTransaction(@PathVariable UUID transactionId) {
+        return ResponseEntity.ok(getStockTransactionUseCase.execute(transactionId));
     }
 }

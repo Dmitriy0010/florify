@@ -268,6 +268,7 @@ export const AuthService = {
   assignRole: (userId: string, role: string) => api.put(`/v1/auth/users/${userId}/role`, { role }),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.put('/v1/auth/password', { currentPassword, newPassword }),
+  getUser: (id: string) => api.get<UserResponse>(`/v1/auth/users/${id}`),
 };
 
 export const StoreService = {
@@ -383,6 +384,8 @@ export const InventoryService = {
     api.get<PagedResult<StockTransaction>>(`/v1/inventory/transactions/${productId}`, { params }),
   getBatches: (productId: string) =>
     api.get<StockBatchDto[]>(`/v1/inventory/batches/${productId}`),
+  getTransaction: (id: string) =>
+    api.get<StockTransaction>(`/v1/inventory/transaction/${id}`),
 };
 
 export const EmployeeService = {
@@ -452,15 +455,15 @@ export const AnalyticsService = {
     return api.get<DashboardStats>('/v1/analytics/dashboard', { params: p });
   },
   getSales: (from: string, to: string, groupBy: 'DAY' | 'WEEK' | 'MONTH' = 'DAY') =>
-    api.get<SalesReportResult>('/v1/analytics/sales', { params: { from: new Date(from).toISOString(), to: new Date(to).toISOString(), groupBy } }),
+    api.get<SalesReportResult>('/v1/analytics/sales', { params: { from, to, groupBy } }),
   getTopProducts: (from: string, to: string, limit = 10) =>
-    api.get<TopProductsResult>('/v1/analytics/products/top', { params: { from: new Date(from).toISOString(), to: new Date(to).toISOString(), limit } }),
+    api.get<TopProductsResult>('/v1/analytics/products/top', { params: { from, to, limit } }),
   getEmployeePerformance: (from: string, to: string) =>
-    api.get<EmployeePerformanceResult>('/v1/analytics/employees/performance', { params: { from: new Date(from).toISOString(), to: new Date(to).toISOString() } }),
+    api.get<EmployeePerformanceResult>('/v1/analytics/employees/performance', { params: { from, to } }),
   getCustomerStats: () => api.get<CustomerStatsResult>('/v1/analytics/customers/stats'),
   getInventoryStats: () => api.get<InventoryStatsResult>('/v1/analytics/inventory/stats'),
   export: (report: 'PNL' | 'SALES' | 'INVENTORY', from: string, to: string, format: 'PDF' | 'EXCEL' = 'PDF') =>
-    api.get<Blob>('/v1/analytics/export', { params: { report, from: new Date(from).toISOString(), to: new Date(to).toISOString(), format }, responseType: 'blob' }),
+    api.get<Blob>('/v1/analytics/export', { params: { report, from, to, format }, responseType: 'blob' }),
 };
 
 export const SupplierService = {
@@ -557,6 +560,8 @@ export const NotificationService = {
     return api.get<PagedResult<NotificationLog>>('/v1/notifications/logs', { params: p });
   },
   getLogById: (id: string) => api.get<NotificationLog>(`/v1/notifications/logs/${id}`),
+  sendBlast: (data: { recipientIds: string[]; channel: 'EMAIL' | 'TELEGRAM'; templateCode?: string; customSubject?: string; customBody?: string; variables?: Record<string, any> }) =>
+    api.post('/v1/notifications/blast', data),
 };
 
 // ============================================================

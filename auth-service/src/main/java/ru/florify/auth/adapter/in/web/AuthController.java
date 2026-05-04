@@ -39,6 +39,7 @@ public class AuthController {
     private final GetCurrentUserUseCase getCurrentUserUseCase;
     private final AssignRoleUseCase assignRoleUseCase;
     private final ChangePasswordUseCase changePasswordUseCase;
+    private final GetUserUseCase getUserUseCase;
     private final AuthMapper authMapper;
     private final UserWebMapper userMapper;
 
@@ -180,5 +181,17 @@ public class AuthController {
         );
         changePasswordUseCase.execute(command);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/users/{userId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @Operation(summary = "Get user profile by ID", responses = {
+            @ApiResponse(responseCode = "200", description = "User found"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    public ResponseEntity<UserResponse> getUser(@PathVariable UUID userId) {
+        log.info("REST request to get user: {}", userId);
+        User user = getUserUseCase.execute(userId);
+        return ResponseEntity.ok(userMapper.toResponse(user));
     }
 }

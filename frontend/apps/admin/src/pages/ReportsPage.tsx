@@ -168,18 +168,30 @@ export default function ReportsPage() {
     try {
       setExporting(type)
       const res = await AnalyticsService.export(type, dateRange.from, dateRange.to, formatType)
-      const blob = new Blob([res.data], { type: 'application/octet-stream' })
+      
+      const blob = new Blob([res.data], { 
+        type: formatType === 'PDF' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      })
+      
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
+      
       const ext = formatType === 'PDF' ? 'pdf' : 'xlsx'
-      link.setAttribute('download', `${type.toLowerCase()}_${dateRange.from}_${dateRange.to}.${ext}`)
+      const filename = `${type.toLowerCase()}_report_${dateRange.from}_to_${dateRange.to}.${ext}`
+      
+      link.setAttribute('download', filename)
       document.body.appendChild(link)
       link.click()
-      link.remove()
-      toast.success('Отчёт сформирован и загружен')
-    } catch {
-      toast.error('Ошибка при генерации отчёта')
+      
+      // Cleanup
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success(`${formatType} отчёт успешно загружен`)
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Не удалось сгенерировать отчёт. Проверьте соединение с сервером.')
     } finally {
       setExporting(null)
     }

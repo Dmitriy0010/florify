@@ -34,7 +34,7 @@ public class FinanceOrderCompletedConsumer {
                 FinancialType.REVENUE_SALE,
                 event.finalAmount(),
                 event.orderId(),
-                "Revenue from order #" + event.orderId(),
+                "Выручка по заказу #" + event.orderId(),
                 null,
                 event.occurredAt()
         ));
@@ -45,7 +45,7 @@ public class FinanceOrderCompletedConsumer {
                     FinancialType.COGS,
                     event.totalCogs().negate(), // Отрицательная сумма для COGS (убыток)
                     event.orderId(),
-                    "COGS for order #" + event.orderId(),
+                    "Себестоимость заказа #" + event.orderId(),
                     null,
                     event.occurredAt()
             ));

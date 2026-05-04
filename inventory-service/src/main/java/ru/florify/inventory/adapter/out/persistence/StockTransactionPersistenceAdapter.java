@@ -54,4 +54,9 @@ public class StockTransactionPersistenceAdapter implements StockTransactionPort 
                 entityPage.getTotalPages()
         );
     }
+
+    @Override
+    public java.util.Optional<StockTransaction> findById(UUID id) {
+        return repository.findById(id).map(mapper::toDomain);
+    }
 }

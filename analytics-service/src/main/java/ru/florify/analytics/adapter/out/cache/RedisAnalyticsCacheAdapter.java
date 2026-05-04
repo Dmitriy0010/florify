@@ -1,5 +1,6 @@
 package ru.florify.analytics.adapter.out.cache;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ import java.util.Set;
 public class RedisAnalyticsCacheAdapter implements AnalyticsCachePort {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
     
     private static final String KEY_PREFIX = "analytics:";
     private static final String DASHBOARD_KEY = KEY_PREFIX + "dashboard";
@@ -27,7 +29,9 @@ public class RedisAnalyticsCacheAdapter implements AnalyticsCachePort {
 
     @Override
     public Optional<DashboardResult> getCachedDashboard() {
-        return Optional.ofNullable((DashboardResult) redisTemplate.opsForValue().get(DASHBOARD_KEY));
+        Object val = redisTemplate.opsForValue().get(DASHBOARD_KEY);
+        if (val == null) return Optional.empty();
+        return Optional.of(objectMapper.convertValue(val, DashboardResult.class));
     }
 
     @Override
@@ -42,7 +46,9 @@ public class RedisAnalyticsCacheAdapter implements AnalyticsCachePort {
 
     @Override
     public Optional<SalesReportResult> getCachedSalesReport(String cacheKey) {
-        return Optional.ofNullable((SalesReportResult) redisTemplate.opsForValue().get(SALES_PREFIX + cacheKey));
+        Object val = redisTemplate.opsForValue().get(SALES_PREFIX + cacheKey);
+        if (val == null) return Optional.empty();
+        return Optional.of(objectMapper.convertValue(val, SalesReportResult.class));
     }
 
     @Override

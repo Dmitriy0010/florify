@@ -38,7 +38,7 @@ public class StockWrittenOffEventConsumer {
                     FinancialType.WRITE_OFF_EXPENSE,
                     event.totalValue().negate(), // Убыток
                     event.sourceDocumentId(),
-                    "Inventory loss: " + event.reason(),
+                    "Убыток от списания: " + event.reason(),
                     null,
                     event.occurredAt()
             ));
