@@ -109,6 +109,16 @@ export default function PosPage() {
     enabled: customerSearch.length > 2,
   });
 
+  // Stock balances for POS cards
+  const { data: stockBalances = [] } = useQuery({
+    queryKey: ['inventory', 'all'],
+    queryFn: inventoryApi.getAllBalances,
+    refetchInterval: 60_000,
+  });
+
+  const getStock = (productId: string) =>
+    stockBalances.find(s => s.productId === productId)?.quantity ?? null;
+
   const totalPrice = useMemo(() => basket.reduce((sum, item) => sum + item.price * item.quantity, 0), [basket]);
 
   const checkoutMutation = useMutation({
@@ -126,7 +136,6 @@ export default function PosPage() {
           lineTotal: item.price * item.quantity
         })),
         customerId: selectedCustomer?.id,
-        employeeId,
         type: 'PICKUP', // Backend expects DELIVERY or PICKUP
         source: 'POS',  // Backend requires OrderSource
         paymentMethod: paymentMethod === 'SBP' ? 'ONLINE' : paymentMethod, // Map SBP to ONLINE
@@ -296,12 +305,15 @@ export default function PosPage() {
               ))
             ) : filteredProducts.map(p => {
               const img = p.imageUrl || FALLBACK_FLOWER;
+              const stockQty = getStock(p.id);
+              const isOutOfStock = stockQty !== null && stockQty <= 0;
+              const isLowStock = stockQty !== null && stockQty > 0 && stockQty < 5;
               return (
                 <button
                   key={p.id}
                   onClick={() => addToBasket(p)}
                   className="glass-card p-0 flex flex-col group text-left overflow-hidden relative border-0 cursor-pointer"
-                  style={{ height: 340 }}
+                  style={{ height: 340, opacity: isOutOfStock ? 0.6 : 1 }}
                 >
                   <div className="relative overflow-hidden bg-slate-100 shrink-0" style={{ height: 210 }}>
                     <img
@@ -309,15 +321,39 @@ export default function PosPage() {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       alt={p.name}
                     />
+                    {/* Price badge */}
                     <div className="absolute top-3 right-3 px-3 py-1 bg-white shadow-md text-slate-900 text-xs font-black rounded-lg">
                       {p.currentPrice.toLocaleString()} ₽
                     </div>
+                    {/* Stock badge */}
+                    {stockQty !== null && (
+                      <div
+                        className="absolute bottom-3 left-3 px-2.5 py-1 text-[10px] font-black rounded-lg shadow-md"
+                        style={{
+                          background: isOutOfStock ? '#EF4444' : isLowStock ? '#F59E0B' : 'rgba(0,0,0,0.65)',
+                          color: 'white',
+                          backdropFilter: 'blur(4px)',
+                        }}
+                      >
+                        {isOutOfStock ? 'Нет в наличии' : `На складе: ${stockQty} шт`}
+                      </div>
+                    )}
+                    {/* Out of stock overlay */}
+                    {isOutOfStock && (
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'rgba(255,255,255,0.4)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 900, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'white', padding: '4px 10px', borderRadius: 8 }}>Нет в наличии</span>
+                      </div>
+                    )}
                   </div>
                   <div className="p-4 flex flex-col gap-2 flex-1">
                     <h4 className="text-xs font-extrabold text-slate-900 leading-tight h-8 overflow-hidden">{p.name}</h4>
                     <div className="flex items-center justify-between mt-auto">
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">АРТ: {p.sku || 'Н/Д'}</p>
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isOutOfStock ? 'bg-red-50 text-red-300' : 'bg-emerald-50 text-emerald-600'}`}>
                         <Plus size={16} />
                       </div>
                     </div>

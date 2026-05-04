@@ -19,7 +19,7 @@ public class CustomerOrderCancelledConsumer {
     private final ReleasePointsUseCase releasePointsUseCase;
 
     @KafkaListener(topics = "orders.order.cancelled", groupId = "customer-service")
-    public void consume(OrderCancelledEvent event, Acknowledgment ack) {
+    public void consume(OrderCancelledEvent event) {
         log.info("Consumed OrderCancelledEvent: {} for order: {}", event.eventId(), event.orderId());
 
         try {
@@ -33,10 +33,10 @@ public class CustomerOrderCancelledConsumer {
             } else {
                 log.debug("No points used in cancelled order {}. Nothing to release.", event.orderId());
             }
-
-            ack.acknowledge();
         } catch (Exception e) {
             log.error("Failed to process OrderCancelledEvent: {}", event.eventId(), e);
+            throw e;
         }
     }
+
 }

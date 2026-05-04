@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react'
 import { 
-  Play, 
-  Square, 
   History, 
   Timer,
-  Loader2,
   Sun,
   Moon,
   TrendingUp,
@@ -16,7 +13,7 @@ import {
   AlertCircle,
   BarChart3
 } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { TimesheetService, TimesheetEntry } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { 
@@ -212,17 +209,17 @@ export default function ShiftsPage() {
         {/* ── Left panel ──────────────────────────────────────────────── */}
         <div className="w-80 flex-shrink-0 bg-white border-r border-neutral-100 flex flex-col overflow-y-auto custom-scrollbar">
 
-          {/* ── Check-in / Check-out widget ────────────────────────── */}
+          {/* ── Shift status (read-only for admin) ── */}
           <div className={cn(
             'p-8 border-b border-neutral-100 flex flex-col items-center text-center transition-all',
-            activeShift ? 'bg-gradient-to-b from-neutral-950 to-neutral-900 text-white' : 'bg-white'
+            activeShift ? 'bg-gradient-to-b from-neutral-950 to-neutral-900 text-white' : 'bg-neutral-50'
           )}>
-            {/* Animated ring */}
+            {/* Status ring */}
             <div className={cn(
               'relative h-28 w-28 mb-6 flex items-center justify-center rounded-full transition-all duration-700',
               activeShift
                 ? 'bg-white/10 shadow-2xl shadow-black/30'
-                : 'bg-neutral-50 border-2 border-dashed border-neutral-200'
+                : 'bg-white border-2 border-neutral-200'
             )}>
               {activeShift && (
                 <>
@@ -231,8 +228,8 @@ export default function ShiftsPage() {
                 </>
               )}
               {activeShift
-                ? <Square size={36} className="text-white/80" />
-                : <Play size={36} className="text-neutral-400 ml-1" />
+                ? <CheckCircle2 size={36} className="text-emerald-400" />
+                : <AlertCircle size={36} className="text-neutral-400" />
               }
             </div>
 
@@ -246,16 +243,8 @@ export default function ShiftsPage() {
                 <p className="text-[10px] text-white/40 font-bold mb-6">
                   Начало: {format(parseISO(activeShift.checkinAt ?? ''), 'HH:mm')}
                 </p>
-                <button
-                  onClick={() => checkoutMutation.mutate()}
-                  disabled={checkoutMutation.isPending}
-                  className="w-full h-12 bg-white text-neutral-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-100 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
-                >
-                  {checkoutMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Square size={16} />}
-                  Завершить смену
-                </button>
-                {/* Progress bar for shift */}
-                <div className="w-full mt-4">
+                {/* Progress bar */}
+                <div className="w-full">
                   <div className="flex justify-between text-[8px] font-black text-white/30 mb-1.5">
                     <span>0ч</span>
                     <span>{Math.round(shiftMinutes / 60 * 10) / 10}ч из 8ч</span>
@@ -269,18 +258,16 @@ export default function ShiftsPage() {
                 </div>
               </>
             ) : (
-              <>
-                <p className="text-xs font-bold text-neutral-400 mb-6">Нажмите, чтобы начать рабочий день</p>
-                <button
-                  onClick={() => checkinMutation.mutate()}
-                  disabled={checkinMutation.isPending}
-                  className="w-full h-12 bg-neutral-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-black/10 disabled:opacity-50"
-                >
-                  {checkinMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                  Открыть смену
-                </button>
-              </>
+              <p className="text-xs font-bold text-neutral-400 mb-2">Смена не открыта. Флорист должен открыть смену в приложении.</p>
             )}
+
+            {/* Info notice */}
+            <div className={cn(
+              'mt-4 w-full px-3 py-2 rounded-xl text-[10px] font-bold text-center',
+              activeShift ? 'bg-white/10 text-white/50' : 'bg-neutral-100 text-neutral-500'
+            )}>
+              Управление сменой — функция флориста
+            </div>
           </div>
 
           {/* ── Month stats ─────────────────────────────────────────── */}

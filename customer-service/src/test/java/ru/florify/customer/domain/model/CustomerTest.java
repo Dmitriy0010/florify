@@ -71,7 +71,7 @@ class CustomerTest {
             .source(CustomerSource.WEB)
             .tags(List.of())
             .active(true)
-            .version(0)
+            
             .createdAt(Instant.now())
             .updatedAt(Instant.now())
             .build();

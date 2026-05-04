@@ -67,7 +67,7 @@ class CreateDeliveryTaskInteractorTest {
                 .endTime(LocalTime.of(12, 0))
                 .maxCapacity(5)
                 .currentLoad(0)
-                .version(0)
+                
                 .build();
     }
 
@@ -100,7 +100,7 @@ class CreateDeliveryTaskInteractorTest {
                 .id(slotId)
                 .maxCapacity(1)
                 .currentLoad(1)  // полный
-                .version(0)
+                
                 .build();
 
         when(taskRepository.existsByOrderId(orderId)).thenReturn(false);

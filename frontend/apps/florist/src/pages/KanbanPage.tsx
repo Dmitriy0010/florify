@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,9 +11,12 @@ import {
 } from 'lucide-react';
 import { format, addDays, isSameDay, startOfToday, startOfWeek } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { ordersApi } from '../lib/ordersApi';
 import { useAuthStore } from '../store/authStore';
 import type { OrderStatus } from '../lib/types';
+import DeliveryOrderModal from '../components/orders/DeliveryOrderModal';
+import { Truck } from 'lucide-react';
 
 /* ─── constants ─── */
 const OPTS = { refetchInterval: 30_000, staleTime: 15_000 };
@@ -99,7 +102,17 @@ function KanbanView() {
   const { userId } = useAuthStore();
 
   const queries = {
-    confirmed:   useQuery({ queryKey: ['kanban', 'CONFIRMED'],        queryFn: () => ordersApi.getKanban('CONFIRMED'  as OrderStatus, 50), ...OPTS }),
+    confirmed:   useQuery({ 
+      queryKey: ['kanban', 'NEW_AND_CONFIRMED'],        
+      queryFn: async () => {
+        const [newOrders, confirmedOrders] = await Promise.all([
+          ordersApi.getKanban('NEW' as OrderStatus, 50),
+          ordersApi.getKanban('CONFIRMED' as OrderStatus, 50)
+        ]);
+        return [...newOrders, ...confirmedOrders].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      }, 
+      ...OPTS 
+    }),
     inProgress:  useQuery({ queryKey: ['kanban', 'IN_PROGRESS'],      queryFn: () => ordersApi.getKanban('IN_PROGRESS' as OrderStatus, 50), ...OPTS }),
     ready:       useQuery({ queryKey: ['kanban', 'READY'],            queryFn: () => ordersApi.getKanban('READY'       as OrderStatus, 50), ...OPTS }),
     delivery:    useQuery({ queryKey: ['kanban', 'OUT_FOR_DELIVERY'], queryFn: () => ordersApi.getKanban('OUT_FOR_DELIVERY' as OrderStatus, 50), ...OPTS }),
@@ -107,94 +120,150 @@ function KanbanView() {
 
   const takeMutation = useMutation({
     mutationFn: ({ orderId }: { orderId: string }) =>
-      ordersApi.updateStatus(orderId, { status: 'IN_PROGRESS' as OrderStatus, floristId: userId ?? undefined }),
+      ordersApi.updateStatus(orderId, 'IN_PROGRESS' as OrderStatus, userId ?? undefined),
     onSettled: () => qc.invalidateQueries({ queryKey: ['kanban'] }),
   });
 
   const readyMutation = useMutation({
     mutationFn: ({ orderId }: { orderId: string }) =>
-      ordersApi.updateStatus(orderId, { status: 'READY' as OrderStatus }),
+      ordersApi.updateStatus(orderId, 'READY' as OrderStatus),
     onSettled: () => qc.invalidateQueries({ queryKey: ['kanban'] }),
   });
 
   const KANBAN_COLS = [
-    { key: 'confirmed',  label: 'НОВЫЕ',        data: queries.confirmed.data  ?? [], color: 'var(--color-status-new)',      actionLabel: 'Взять',  action: (id: string) => takeMutation.mutate({ orderId: id }) },
-    { key: 'inProgress', label: 'СОБИРАЮ',      data: queries.inProgress.data ?? [], color: 'var(--color-status-progress)', actionLabel: 'Готово', action: (id: string) => readyMutation.mutate({ orderId: id }) },
-    { key: 'ready',      label: 'ГОТОВО',        data: queries.ready.data      ?? [], color: 'var(--color-status-ready)',    actionLabel: null,     action: null },
-    { key: 'delivery',   label: 'У КУРЬЕРА',     data: queries.delivery.data   ?? [], color: 'var(--color-status-delivery)', actionLabel: null,     action: null },
+    { key: 'confirmed',  label: 'НОВЫЕ',        data: queries.confirmed.data  ?? [], color: 'var(--color-status-new)',      actionLabel: 'Взять',  action: (id: string) => takeMutation.mutate({ orderId: id }), status: 'CONFIRMED' },
+    { key: 'inProgress', label: 'СОБИРАЮ',      data: queries.inProgress.data ?? [], color: 'var(--color-status-progress)', actionLabel: 'Готово', action: (id: string) => readyMutation.mutate({ orderId: id }), status: 'IN_PROGRESS' },
+    { key: 'ready',      label: 'ГОТОВО',        data: queries.ready.data      ?? [], color: 'var(--color-status-ready)',    actionLabel: null,     action: null, status: 'READY' },
+    { key: 'delivery',   label: 'У КУРЬЕРА',     data: queries.delivery.data   ?? [], color: 'var(--color-status-delivery)', actionLabel: null,     action: null, status: 'OUT_FOR_DELIVERY' },
   ];
+
+  const onDragEnd = useCallback((result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId) return;
+
+    const destCol = KANBAN_COLS.find(c => c.key === destination.droppableId);
+    if (!destCol) return;
+
+    // Trigger mutation based on status
+    if (destCol.status === 'IN_PROGRESS') {
+      takeMutation.mutate({ orderId: draggableId });
+    } else if (destCol.status === 'READY') {
+      readyMutation.mutate({ orderId: draggableId });
+    } else {
+      ordersApi.updateStatus(draggableId, destCol.status as OrderStatus)
+        .then(() => qc.invalidateQueries({ queryKey: ['kanban'] }));
+    }
+  }, [KANBAN_COLS, takeMutation, readyMutation, qc]);
 
   const isLoading = Object.values(queries).some(q => q.isLoading);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, flex: 1, minHeight: 0 }}>
-      {KANBAN_COLS.map(col => (
-        <div key={col.key} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRadius: 12, overflow: 'hidden', background: '#FAFAFA', border: '1px solid var(--color-border)' }}>
-          {/* Column header */}
-          <div style={{
-            background: col.color,
-            padding: '10px 14px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexShrink: 0,
-          }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              {col.label}
-            </span>
-            <span style={{
-              background: 'rgba(255,255,255,0.25)',
-              color: 'white',
-              borderRadius: 6,
-              padding: '1px 7px',
-              fontSize: 11,
-              fontWeight: 800,
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, flex: 1, minHeight: 0 }}>
+        {KANBAN_COLS.map(col => (
+          <div key={col.key} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRadius: 12, overflow: 'hidden', background: '#FAFAFA', border: '1px solid var(--color-border)' }}>
+            {/* Column header */}
+            <div style={{
+              background: col.color,
+              padding: '10px 14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexShrink: 0,
             }}>
-              {col.data.length}
-            </span>
-          </div>
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                {col.label}
+              </span>
+              <span style={{
+                background: 'rgba(255,255,255,0.25)',
+                color: 'white',
+                borderRadius: 6,
+                padding: '1px 7px',
+                fontSize: 11,
+                fontWeight: 800,
+              }}>
+                {col.data.length}
+              </span>
+            </div>
 
-          {/* Cards */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}
-               className="no-scrollbar">
-            {isLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 32, opacity: 0.3 }}>
-                <RefreshCw size={22} className="spin" />
-              </div>
-            ) : col.data.length === 0 ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', opacity: 0.15, gap: 8 }}>
-                <Package size={28} strokeWidth={1.5} />
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Пусто</span>
-              </div>
-            ) : col.data.map((order: any) => (
-              <div key={order.id}>
-                <OrderCard order={order} myId={userId} />
-                {col.actionLabel && col.action && (
-                  <button
-                    onClick={() => col.action!(order.id)}
-                    style={{
-                      width: '100%',
-                      marginTop: 4,
-                      padding: '6px 0',
-                      background: col.color,
-                      color: 'white',
-                      border: 0,
-                      borderRadius: 6,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {col.actionLabel} →
-                  </button>
-                )}
-              </div>
-            ))}
+            {/* Cards */}
+            <Droppable droppableId={col.key}>
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    background: snapshot.isDraggingOver ? 'rgba(0,0,0,0.02)' : 'transparent',
+                    transition: 'background 0.2s',
+                  }}
+                  className="no-scrollbar"
+                >
+                  {isLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: 32, opacity: 0.3 }}>
+                      <RefreshCw size={22} className="spin" />
+                    </div>
+                  ) : col.data.length === 0 ? (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', opacity: 0.15, gap: 8 }}>
+                      <Package size={28} strokeWidth={1.5} />
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Пусто</span>
+                    </div>
+                  ) : col.data.map((order: any, index: number) => (
+                    <Draggable key={order.id} draggableId={order.id} index={index}>
+                      {(dragProvided, dragSnapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          {...dragProvided.dragHandleProps}
+                          style={{
+                            ...dragProvided.draggableProps.style,
+                            opacity: dragSnapshot.isDragging ? 0.9 : 1,
+                            transform: dragSnapshot.isDragging ? `${dragProvided.draggableProps.style?.transform} scale(1.02)` : dragProvided.draggableProps.style?.transform,
+                            zIndex: dragSnapshot.isDragging ? 100 : 1,
+                            boxShadow: dragSnapshot.isDragging ? 'var(--shadow-lg)' : 'none',
+                            transition: 'all 0.1s',
+                          }}
+                        >
+                          <OrderCard order={order} myId={userId} />
+                          {col.actionLabel && col.action && !dragSnapshot.isDragging && (
+                            <button
+                              onClick={() => col.action!(order.id)}
+                              style={{
+                                width: '100%',
+                                marginTop: 4,
+                                padding: '6px 0',
+                                background: col.color,
+                                color: 'white',
+                                border: 0,
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                letterSpacing: '0.04em',
+                              }}
+                            >
+                              {col.actionLabel} →
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </DragDropContext>
   );
 }
 
@@ -202,6 +271,7 @@ function KanbanView() {
    CALENDAR VIEW (day filter)
    ───────────────────────── */
 function CalendarView({ allOrders, isLoading }: { allOrders: any[]; isLoading: boolean }) {
+  const qc = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
     const d = new Date().getDay();
@@ -219,7 +289,7 @@ function CalendarView({ allOrders, isLoading }: { allOrders: any[]; isLoading: b
   const getForDayStatus = (day: Date, status: string) =>
     allOrders.filter(o => {
       if (status === 'CONFIRMED') {
-        if (o.status !== 'CONFIRMED' && o.status !== 'IN_PROGRESS') return false;
+        if (o.status !== 'NEW' && o.status !== 'CONFIRMED' && o.status !== 'IN_PROGRESS') return false;
       } else if (o.status !== status) return false;
       return isSameDay(new Date(o.createdAt || Date.now()), day);
     });
@@ -292,35 +362,82 @@ function CalendarView({ allOrders, isLoading }: { allOrders: any[]; isLoading: b
       </div>
 
       {/* Kanban columns for selected day */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, flex: 1, minHeight: 0 }}>
-        {COLUMNS.map(col => {
-          const dayOrders = getForDayStatus(selectedDay, col.id);
-          return (
-            <div key={col.id} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRadius: 12, overflow: 'hidden', background: '#FAFAFA', border: '1px solid var(--color-border)' }}>
-              <div className={col.colorClass} style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.12em' }}>{col.name}</span>
-                <span style={{ background: 'rgba(255,255,255,0.25)', color: 'white', borderRadius: 6, padding: '1px 7px', fontSize: 11, fontWeight: 800 }}>
-                  {dayOrders.length}
-                </span>
+      <DragDropContext onDragEnd={(result) => {
+        const { destination, draggableId } = result;
+        if (!destination) return;
+        const destCol = COLUMNS.find(c => c.id === destination.droppableId);
+        if (!destCol) return;
+        
+        ordersApi.updateStatus(draggableId, destCol.id as OrderStatus)
+          .then(() => qc.invalidateQueries({ queryKey: ['orders', 'all'] }));
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, flex: 1, minHeight: 0 }}>
+          {COLUMNS.map(col => {
+            const dayOrders = getForDayStatus(selectedDay, col.id);
+            return (
+              <div key={col.id} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRadius: 12, overflow: 'hidden', background: '#FAFAFA', border: '1px solid var(--color-border)' }}>
+                <div className={col.colorClass} style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.12em' }}>{col.name}</span>
+                  <span style={{ background: 'rgba(255,255,255,0.25)', color: 'white', borderRadius: 6, padding: '1px 7px', fontSize: 11, fontWeight: 800 }}>
+                    {dayOrders.length}
+                  </span>
+                </div>
+                <Droppable droppableId={col.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: 8,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                        background: snapshot.isDraggingOver ? 'rgba(0,0,0,0.02)' : 'transparent',
+                        transition: 'background 0.2s',
+                      }}
+                      className="no-scrollbar"
+                    >
+                      {isLoading ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: 32, opacity: 0.3 }}>
+                          <RefreshCw size={22} className="spin" />
+                        </div>
+                      ) : dayOrders.length === 0 ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', opacity: 0.15, gap: 8 }}>
+                          <Package size={28} strokeWidth={1.5} />
+                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Пусто</span>
+                        </div>
+                      ) : dayOrders.map((order, index) => (
+                        <Draggable key={order.id} draggableId={order.id} index={index}>
+                          {(dragProvided, dragSnapshot) => (
+                            <div
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              {...dragProvided.dragHandleProps}
+                              style={{
+                                ...dragProvided.draggableProps.style,
+                                opacity: dragSnapshot.isDragging ? 0.9 : 1,
+                                transform: dragSnapshot.isDragging ? `${dragProvided.draggableProps.style?.transform} scale(1.02)` : dragProvided.draggableProps.style?.transform,
+                                zIndex: dragSnapshot.isDragging ? 100 : 1,
+                                boxShadow: dragSnapshot.isDragging ? 'var(--shadow-lg)' : 'none',
+                                transition: 'all 0.1s',
+                              }}
+                            >
+                              <OrderCard order={order} myId={null} />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }} className="no-scrollbar">
-                {isLoading ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: 32, opacity: 0.3 }}>
-                    <RefreshCw size={22} className="spin" />
-                  </div>
-                ) : dayOrders.length === 0 ? (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', opacity: 0.15, gap: 8 }}>
-                    <Package size={28} strokeWidth={1.5} />
-                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Пусто</span>
-                  </div>
-                ) : dayOrders.map(order => (
-                  <OrderCard key={order.id} order={order} myId={null} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </DragDropContext>
     </>
   );
 }
@@ -331,12 +448,13 @@ function CalendarView({ allOrders, isLoading }: { allOrders: any[]; isLoading: b
 export default function KanbanPage() {
   const navigate = useNavigate();
   const [view, setView] = useState<'calendar' | 'kanban'>('calendar');
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
 
   // For calendar view — fetch all statuses
   const { data: allOrdersData = [], isLoading } = useQuery({
     queryKey: ['orders', 'all'],
     queryFn: async () => {
-      const statuses: OrderStatus[] = ['CONFIRMED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED'];
+      const statuses: OrderStatus[] = ['NEW', 'CONFIRMED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED'];
       const results = await Promise.all(statuses.map(s => ordersApi.getKanban(s, 100)));
       return results.flat();
     },
@@ -387,6 +505,20 @@ export default function KanbanPage() {
 
         {/* Right: view switcher + quick nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Quick Delivery */}
+          <button
+            onClick={() => setIsDeliveryModalOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 8,
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-brand)', color: 'white', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+              transition: 'all 0.15s',
+            }}>
+            <Truck size={14} /> + Доставка
+          </button>
+
           {/* Quick goto POS */}
           <button
             onClick={() => navigate('/pos')}
@@ -439,6 +571,11 @@ export default function KanbanPage() {
         ? <CalendarView allOrders={allOrders} isLoading={isLoading} />
         : <KanbanView />
       }
+
+      <DeliveryOrderModal 
+        isOpen={isDeliveryModalOpen} 
+        onClose={() => setIsDeliveryModalOpen(false)} 
+      />
     </div>
   );
 }

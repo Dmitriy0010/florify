@@ -21,36 +21,39 @@ public class RecordOrderFactInteractor implements RecordOrderFactUseCase {
 
     @Override
     @Transactional
-    public void record(RecordOrderFactCommand cmd) {
+    public synchronized void record(RecordOrderFactCommand cmd) {
         repository.findByOrderId(cmd.orderId()).ifPresentOrElse(
-            fact -> {
-                // If fact exists, only update status and completion time if it's currently becoming COMPLETED
-                fact.setStatus(cmd.status());
-                if ("COMPLETED".equals(cmd.status())) {
-                    fact.setCompletedAt(cmd.completedAt());
-                }
-                repository.update(fact);
-                cachePort.evictDashboard();
-            },
-            () -> {
-                // Create new fact
-                OrderFact fact = OrderFact.builder()
-                    .orderId(cmd.orderId())
-                    .storeId(cmd.storeId())
-                    .customerId(cmd.customerId())
-                    .assignedEmployeeId(cmd.assignedEmployeeId())
-                    .orderSource(cmd.orderSource())
-                    .status(cmd.status())
-                    .totalAmount(cmd.totalAmount())
-                    .cogsAmount(BigDecimal.ZERO)
-                    .grossProfit(cmd.totalAmount())
-                    .itemCount(cmd.itemCount())
-                    .completedAt(cmd.completedAt())
-                    .recordedAt(Instant.now())
-                    .build();
-                repository.save(fact);
-                cachePort.evictDashboard();
-            }
+            fact -> updateExisting(fact, cmd),
+            () -> createNew(cmd)
         );
+    }
+
+    private void updateExisting(OrderFact fact, RecordOrderFactCommand cmd) {
+        // If fact exists, only update status and completion time if it's currently becoming COMPLETED
+        fact.setStatus(cmd.status());
+        if ("COMPLETED".equals(cmd.status())) {
+            fact.setCompletedAt(cmd.completedAt());
+        }
+        repository.update(fact);
+        cachePort.evictDashboard();
+    }
+
+    private void createNew(RecordOrderFactCommand cmd) {
+        OrderFact fact = OrderFact.builder()
+            .orderId(cmd.orderId())
+            .storeId(cmd.storeId())
+            .customerId(cmd.customerId())
+            .assignedEmployeeId(cmd.assignedEmployeeId())
+            .orderSource(cmd.orderSource())
+            .status(cmd.status())
+            .totalAmount(cmd.totalAmount() != null ? cmd.totalAmount() : BigDecimal.ZERO)
+            .cogsAmount(BigDecimal.ZERO)
+            .grossProfit(cmd.totalAmount() != null ? cmd.totalAmount() : BigDecimal.ZERO)
+            .itemCount(cmd.itemCount() != null ? cmd.itemCount() : 0)
+            .completedAt(cmd.completedAt())
+            .recordedAt(Instant.now())
+            .build();
+        repository.save(fact);
+        cachePort.evictDashboard();
     }
 }

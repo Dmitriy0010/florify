@@ -18,6 +18,7 @@ public record OrderStatusChangedSpringEvent(
         String newStatus,
         String deliveryAddress,
         String orderType, // DELIVERY or PICKUP
+        UUID deliverySlotId,
         UUID customerId,
         Instant occurredAt
 ) {
@@ -27,11 +28,12 @@ public record OrderStatusChangedSpringEvent(
             String newStatus,
             String deliveryAddress,
             String orderType,
+            UUID deliverySlotId,
             UUID customerId,
             Instant now
     ) {
         return new OrderStatusChangedSpringEvent(
-                orderId, previousStatus, newStatus, deliveryAddress, orderType, customerId, now
+                orderId, previousStatus, newStatus, deliveryAddress, orderType, deliverySlotId, customerId, now
         );
     }
 }

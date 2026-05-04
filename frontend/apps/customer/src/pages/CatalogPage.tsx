@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ProductCard } from '@/components/ProductCard'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -12,17 +12,25 @@ import {
 } from '@/components/ui/select'
 import { useProducts, useCategories } from '@/hooks/useProducts'
 import type { ProductsFilters } from '@/api/types'
+import { useShopStore } from '@/store/shopStore'
 
 export function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { selectedStoreId } = useShopStore()
   
   // State for filters
   const [filters, setFilters] = useState<ProductsFilters>({
     categoryId: searchParams.get('categoryId') || undefined,
+    storeId: selectedStoreId || undefined,
     page: 0,
     size: 20,
     active: true
   })
+
+  // Sync storeId from shopStore to filters
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, storeId: selectedStoreId || undefined, page: 0 }))
+  }, [selectedStoreId])
 
   // State for sorting (Client-side initially or if backend supports it later)
   const [sort, setSort] = useState('popularity-desc')
@@ -39,11 +47,13 @@ export function CatalogPage() {
     }
     setSearchParams(searchParams)
   }
+
   
   // Sorted products (if we want to do it on the client for now)
   const sortedProducts = useMemo(() => {
-    if (!productsData?.content) return []
-    const content = [...productsData.content]
+    if (!productsData?.data) return []
+    const content = [...productsData.data]
+
     
     if (sort === 'price-asc') return content.sort((a,b) => a.currentPrice - b.currentPrice)
     if (sort === 'price-desc') return content.sort((a,b) => b.currentPrice - a.currentPrice)

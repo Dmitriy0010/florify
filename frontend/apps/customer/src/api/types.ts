@@ -19,8 +19,18 @@ export interface Product {
   version: number
 }
 
+export interface DeliverySlot {
+  id: string
+  startTime: string
+  endTime: string
+  capacity: number
+  remainingCapacity: number
+  active: boolean
+}
+
 export interface PagedResult<T> {
-  content: T[]
+  data: T[]
+
   totalElements: number
   totalPages: number
   size: number
@@ -31,6 +41,7 @@ export interface PagedResult<T> {
 
 export interface ProductsFilters {
   categoryId?: string
+  storeId?: string
   searchTerm?: string
   active?: boolean
   page?: number
@@ -40,7 +51,7 @@ export interface ProductsFilters {
 // --- Order Enums ---
 export type OrderStatus = 'NEW' | 'ASSEMBLING' | 'READY' | 'DELIVERY' | 'COMPLETED' | 'CANCELLED'
 export type OrderType = 'DELIVERY' | 'PICKUP'
-export type OrderSource = 'WEBSITE' | 'MOBILE_APP' | 'POS' | 'TELEGRAM'
+export type OrderSource = 'WEB' | 'MOBILE' | 'POS' | 'PARTNER'
 export type PaymentMethod = 'CASH' | 'CARD' | 'ONLINE'
 
 export interface OrderItem {
@@ -66,6 +77,7 @@ export interface Order {
 }
 
 export interface CreateOrderRequest {
+  storeId: string
   items: { productId: string; quantity: number }[]
   guestPhone?: string
   guestName?: string
@@ -73,6 +85,7 @@ export interface CreateOrderRequest {
   source: OrderSource
   paymentMethod: PaymentMethod
   deliveryAddress?: string
+  bonusPointsUsed?: number
 }
 
 // --- Auth DTOs ---
@@ -92,3 +105,36 @@ export interface User {
   lastName: string
   roles: { id: string; name: string }[]
 }
+
+// --- Loyalty DTOs ---
+
+export type LoyaltyTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM'
+
+export interface LoyaltyAccount {
+  id: string
+  customerId: string
+  tier: LoyaltyTier
+  pointsBalance: number
+  reservedPoints: number
+  availablePoints: number
+  totalSpent: number
+  updatedAt: string
+}
+
+export interface LoyaltyTierInfo {
+  tier: LoyaltyTier
+  tierRank: number
+  minSpend: number
+  pointsPerHundred: number
+  discountPercent: number
+}
+
+export interface LoyaltyTransaction {
+  id: string
+  orderId?: string
+  type: 'EARN' | 'WITHDRAW' | 'RESERVE' | 'CANCEL_RESERVE' | 'EXPIRE'
+  points: number
+  description: string
+  occurredAt: string
+}
+

@@ -21,10 +21,11 @@ const HomePage = () => (
   </div>
 )
 const ProductPage = () => <div>Product Page</div>
-const AccountLayout = () => <div>Account Layout</div>
-const AccountOrdersPage = () => <div>Account Orders Page</div>
-const AccountLoyaltyPage = () => <div>Account Loyalty Page</div>
-const AccountProfilePage = () => <div>Account Profile Page</div>
+import { AccountLayout } from '@/layouts/AccountLayout'
+import { AccountOrdersPage } from '@/pages/AccountOrdersPage'
+import { AccountLoyaltyPage } from '@/pages/AccountLoyaltyPage'
+import { AccountProfilePage } from '@/pages/AccountProfilePage'
+import { AccountFavoritesPage } from '@/pages/AccountFavoritesPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="orders" replace /> },
           { path: 'orders', element: <AccountOrdersPage /> },
+          { path: 'favorites', element: <AccountFavoritesPage /> },
           { path: 'loyalty', element: <AccountLoyaltyPage /> },
           { path: 'profile', element: <AccountProfilePage /> },
         ],

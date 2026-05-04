@@ -13,6 +13,8 @@ public interface ProductRepository {
     Optional<Product> findById(UUID id);
     Optional<Product> findBySku(String sku);
     PagedResult<Product> findAll(GetCatalogQuery query);
-    List<Product> findByCategoryId(UUID categoryId);     // For BulkPriceUpdate
+    PagedResult<Product> findAllWithIds(GetCatalogQuery query, List<UUID> ids);
+    List<Product> findByCategoryId(UUID categoryId);
+     // For BulkPriceUpdate
     boolean existsBySku(String sku);
 }

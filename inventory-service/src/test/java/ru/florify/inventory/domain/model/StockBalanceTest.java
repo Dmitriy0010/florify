@@ -17,7 +17,7 @@ class StockBalanceTest {
     void shouldCalculateWacOnReceive() {
         // Given: Empty balance
         UUID productId = UUID.randomUUID();
-        StockBalance balance = StockBalance.createEmpty(productId);
+        StockBalance balance = StockBalance.createEmpty(productId, UUID.randomUUID());
 
         // When: First delivery (10 units @ 100.00)
         balance = balance.receive(new BigDecimal("10.00"), new BigDecimal("100.00"));
@@ -38,7 +38,7 @@ class StockBalanceTest {
     @DisplayName("Should decrease quantity on write-off without changing WAC")
     void shouldDecreaseQuantityOnWriteOff() {
         // Given: Balance with 10 units @ 100.00
-        StockBalance balance = new StockBalance(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("10.00"), new BigDecimal("100.00"), 0);
+        StockBalance balance = new StockBalance(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("10.00"), new BigDecimal("100.00"));
 
         // When: Write off 3 units
         balance = balance.writeOff(new BigDecimal("3.00"));
@@ -52,7 +52,7 @@ class StockBalanceTest {
     @DisplayName("Should throw InsufficientStockException when writing off more than available")
     void shouldThrowExceptionOnInsufficientStock() {
         // Given: Balance with 5 units
-        StockBalance balance = new StockBalance(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("5.00"), new BigDecimal("100.00"), 0);
+        StockBalance balance = new StockBalance(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("5.00"), new BigDecimal("100.00"));
 
         // Then: Throw exception
         assertThrows(InsufficientStockException.class, () -> balance.writeOff(new BigDecimal("6.00")));

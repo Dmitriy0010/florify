@@ -56,7 +56,7 @@ public class OrderStatusChangedEventConsumer {
 
         CreateDeliveryTaskCommand command = new CreateDeliveryTaskCommand(
                 event.orderId(),
-                null,                   // slotId — может быть назначен позже через REST
+                event.deliverySlotId(), // slotId from event
                 null,                   // zoneId — может быть назначен позже
                 event.deliveryAddress() != null ? event.deliveryAddress() : "Address not provided",
                 null,                   // latitude — геокодирование на следующем шаге

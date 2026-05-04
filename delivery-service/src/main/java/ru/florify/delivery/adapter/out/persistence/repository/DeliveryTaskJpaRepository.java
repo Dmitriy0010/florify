@@ -32,10 +32,10 @@ public interface DeliveryTaskJpaRepository extends JpaRepository<DeliveryTaskJpa
     @Query("""
             SELECT t FROM DeliveryTaskJpaEntity t
             JOIN DeliverySlotJpaEntity s ON t.slotId = s.id
-            WHERE t.status = :status AND s.date = :date
+            WHERE t.status IN :statuses AND s.date = :date
             """)
-    List<DeliveryTaskJpaEntity> findByStatusAndSlotDate(
-            @Param("status") TaskStatus status,
+    List<DeliveryTaskJpaEntity> findByStatusesAndSlotDate(
+            @Param("statuses") java.util.Collection<TaskStatus> statuses,
             @Param("date") LocalDate date
     );
 }

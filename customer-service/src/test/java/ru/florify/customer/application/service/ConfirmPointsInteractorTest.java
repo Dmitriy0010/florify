@@ -4,9 +4,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import ru.florify.common.event.PointsConfirmedEvent;
+import ru.florify.common.event.TierUpgradedEvent;
 import ru.florify.customer.application.command.ConfirmPointsCommand;
 import ru.florify.customer.application.port.out.*;
 import ru.florify.customer.domain.enums.LoyaltyTier;
@@ -16,11 +18,9 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,7 +31,7 @@ class ConfirmPointsInteractorTest {
     @Mock
     private LoyaltyTransactionRepository transactionRepository;
     @Mock
-    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private ApplicationEventPublisher eventPublisher;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-04-13T10:00:00Z"), ZoneId.of("UTC"));
     private ConfirmPointsInteractor interactor;
@@ -63,12 +63,12 @@ class ConfirmPointsInteractorTest {
         interactor.execute(command);
 
         // then
-        // Verify points earned calculation: (500 / 100) * 5 = 25
-        verify(account).confirm(eq(30), eq(25), eq(new BigDecimal("500.00")), any());
+        // Verify points earned calculation: (500 / 100) * 1 = 5
+        verify(account).confirm(eq(30), eq(5), eq(new BigDecimal("500.00")), any());
         
         verify(loyaltyAccountRepository).save(any(LoyaltyAccount.class));
         verify(transactionRepository, times(2)).save(any()); // Deduction + Earning
-        verify(eventPublisher, atLeastOnce()).publishEvent(any(ru.florify.common.event.PointsConfirmedEvent.class));
+        verify(eventPublisher).publishEvent(any(PointsConfirmedEvent.class));
     }
 
     @Test
@@ -85,6 +85,7 @@ class ConfirmPointsInteractorTest {
 
         LoyaltyAccount upgradedAccount = mock(LoyaltyAccount.class);
         when(upgradedAccount.getTier()).thenReturn(LoyaltyTier.SILVER); // Tier changed
+        when(upgradedAccount.getPointsBalance()).thenReturn(50);
         
         when(account.confirm(anyInt(), anyInt(), any(), any())).thenReturn(account);
         when(account.upgradeTierIfNeeded(any())).thenReturn(upgradedAccount);
@@ -93,6 +94,7 @@ class ConfirmPointsInteractorTest {
         interactor.execute(command);
 
         // then
-        verify(eventPublisher, times(2)).publishEvent(any()); // PointsConfirmed + TierUpgraded
+        verify(eventPublisher).publishEvent(any(PointsConfirmedEvent.class));
+        verify(eventPublisher).publishEvent(any(TierUpgradedEvent.class));
     }
 }

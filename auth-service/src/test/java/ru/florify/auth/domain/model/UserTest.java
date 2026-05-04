@@ -21,10 +21,10 @@ class UserTest {
                 .active(true)
                 .build();
 
-        assertEquals(id, user.getId());
-        assertEquals("test@example.com", user.getEmail());
-        assertTrue(user.getRoles().contains(Role.CUSTOMER));
-        assertTrue(user.isActive());
+        assertEquals(id, user.id());
+        assertEquals("test@example.com", user.email());
+        assertTrue(user.roles().contains(Role.CUSTOMER));
+        assertTrue(user.active());
     }
 
     @Test
@@ -38,8 +38,8 @@ class UserTest {
         User deactivated = user.withActive(false);
 
         assertNotSame(user, deactivated);
-        assertTrue(user.isActive());
-        assertFalse(deactivated.isActive());
-        assertEquals(user.getEmail(), deactivated.getEmail());
+        assertTrue(user.active());
+        assertFalse(deactivated.active());
+        assertEquals(user.email(), deactivated.email());
     }
 }

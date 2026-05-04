@@ -24,6 +24,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.hamcrest.Matchers.comparesEqualTo;
 
 @ExtendWith(MockitoExtension.class)
 class MarkBatchesAsExpiredInteractorTest {
@@ -50,11 +52,13 @@ class MarkBatchesAsExpiredInteractorTest {
     @SuppressWarnings("unchecked")
     void shouldExpireBatchesAndSyncBalance() {
         UUID productId = UUID.randomUUID();
+        UUID storeId = UUID.randomUUID();
         
         // Batch 1: Expired, has 10 units left
         StockBatch batch1 = StockBatch.builder()
                 .id(UUID.randomUUID())
                 .productId(productId)
+                .storeId(storeId)
                 .quantityRemaining(new BigDecimal("10.00"))
                 .expiresAt(now.minusSeconds(1))
                 .status(BatchStatus.AVAILABLE)
@@ -64,15 +68,16 @@ class MarkBatchesAsExpiredInteractorTest {
         StockBatch batch2 = StockBatch.builder()
                 .id(UUID.randomUUID())
                 .productId(productId)
+                .storeId(storeId)
                 .quantityRemaining(new BigDecimal("5.00"))
                 .expiresAt(now.minusSeconds(100))
                 .status(BatchStatus.AVAILABLE)
                 .build();
 
-        StockBalance existingBalance = new StockBalance(UUID.randomUUID(), productId, new BigDecimal("100.00"), new BigDecimal("10.00"), 0);
+        StockBalance existingBalance = new StockBalance(UUID.randomUUID(), productId, storeId, new BigDecimal("100.00"), new BigDecimal("10.00"));
 
         when(stockBatchRepository.findExpiredBatches(now)).thenReturn(List.of(batch1, batch2));
-        when(balanceLookup.findByProductId(productId)).thenReturn(Optional.of(existingBalance));
+        when(balanceLookup.findByProductIdAndStoreId(productId, storeId)).thenReturn(Optional.of(existingBalance));
 
         int result = interactor.execute();
 
@@ -86,7 +91,7 @@ class MarkBatchesAsExpiredInteractorTest {
         assertEquals(BatchStatus.EXPIRED, savedBatches.get(1).getStatus());
 
         // Verify Balance Sync (100 - 15 = 85)
-        verify(balancePersist).save(argThat(balance -> balance.getQuantityInStock().compareTo(new BigDecimal("85.00")) == 0));
+        verify(balancePersist).save(argThat(b -> b.getQuantityInStock().compareTo(new BigDecimal("85.00")) == 0));
 
         // Verify Event published
         verify(eventPublisher).publish(any());

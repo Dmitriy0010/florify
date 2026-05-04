@@ -21,13 +21,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useCartStore } from '@/store/cartStore'
+import { useShopStore } from '@/store/shopStore'
+import { useAuthStore } from '@/store/authStore'
 import { ordersApi } from '@/api/orders'
+import { paymentApi } from '@/api/payment'
+import { storesApi } from '@/api/stores'
+import { deliveryApi } from '@/api/delivery'
 import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { loyaltyApi } from '@/api/loyalty'
+import { PaymentQRModal } from '@/components/checkout/PaymentQRModal'
 
 const checkoutSchema = z.object({
   firstName: z.string().min(2, 'Введите имя'),
   phone: z.string().min(10, 'Введите корректный номер телефона'),
-  address: z.string().min(5, 'Введите адрес доставки'),
+  address: z.string().min(5, 'Введите адрес доставки').optional(),
+  deliverySlotId: z.string().optional(),
   deliveryType: z.enum(['DELIVERY', 'PICKUP']),
   paymentMethod: z.enum(['CARD', 'CASH', 'ONLINE']),
 })
@@ -37,26 +46,67 @@ type CheckoutFormValues = z.infer<typeof checkoutSchema>
 export function CheckoutPage() {
   const navigate = useNavigate()
   const { items, getTotalPrice, clearCart } = useCartStore()
+  const { selectedStoreId } = useShopStore()
+  const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(false)
+  const [showPaymentQR, setShowPaymentQR] = useState<{
+    orderId: string
+    orderNumber: string
+    amount: number
+    qrData: string
+  } | null>(null)
   
+  const { data: stores } = useQuery({
+    queryKey: ['stores'],
+    queryFn: () => storesApi.getAll(),
+  })
+  
+  const { data: account } = useQuery({
+    queryKey: ['loyalty-account'],
+    queryFn: () => loyaltyApi.getMyAccount(),
+    retry: false,
+  })
+
+  const { data: tiers } = useQuery({
+    queryKey: ['loyalty-tiers'],
+    queryFn: () => loyaltyApi.getTiers(),
+    retry: false,
+  })
+
+  const { data: slots = [] } = useQuery({
+    queryKey: ['delivery-slots'],
+    queryFn: () => deliveryApi.getSlots(),
+  })
+  
+  const currentTierInfo = tiers?.find(t => t.tier === account?.tier)
+  const discountPercent = currentTierInfo?.discountPercent || 0
+  
+  const selectedStore = stores?.find(s => s.id === selectedStoreId)
+  const storeAddress = selectedStore?.address || 'Неизвестный адрес'
+
   const totalPrice = getTotalPrice()
-  const shipping = totalPrice > 5000 || items.length === 0 ? 0 : 500
-  const finalPrice = totalPrice + shipping
+  const discountAmount = Math.floor((totalPrice * discountPercent) / 100)
+  const shipping = (totalPrice - discountAmount) > 5000 || items.length === 0 ? 0 : 500
+  const finalPrice = totalPrice - discountAmount + shipping
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
+      firstName: user?.firstName || '',
+      phone: user?.phone || '',
       deliveryType: 'DELIVERY',
       paymentMethod: 'ONLINE',
     }
   })
 
   const deliveryType = watch('deliveryType')
+  const paymentMethod = watch('paymentMethod')
 
   const onSubmit = async (data: CheckoutFormValues) => {
     if (items.length === 0) {
@@ -74,25 +124,59 @@ export function CheckoutPage() {
         lineTotal: item.price * item.quantity
       }))
 
+      if (!selectedStoreId) {
+        toast.error('Пожалуйста, выберите магазин в верхнем меню перед оформлением заказа.')
+        setIsLoading(false)
+        return
+      }
+
       const response = await ordersApi.createOrder({
+        storeId: selectedStoreId,
         items: orderItems,
         guestName: data.firstName,
         guestPhone: data.phone,
         type: data.deliveryType,
-        source: 'WEBSITE',
+        source: 'WEB',
         paymentMethod: data.paymentMethod,
-        deliveryAddress: data.deliveryType === 'DELIVERY' ? data.address : 'Самовывоз',
+        deliveryAddress: data.deliveryType === 'DELIVERY' ? data.address : `Самовывоз: ${storeAddress}`,
+        deliverySlotId: data.deliveryType === 'DELIVERY' ? data.deliverySlotId : undefined,
+        bonusPointsUsed: discountAmount > 0 ? discountAmount : undefined
       })
 
-      clearCart()
-      toast.success('Заказ успешно оформлен!')
-      navigate(`/order/${response.id}`)
+      if (data.paymentMethod === 'ONLINE') {
+        try {
+          const paymentData = await paymentApi.initiateSbp(response.id)
+          setShowPaymentQR({
+            orderId: response.id,
+            orderNumber: response.orderNumber,
+            amount: paymentData.amount,
+            qrData: paymentData.qrCodeData
+          })
+          // Do not clear cart or navigate yet. Wait for payment success.
+        } catch (paymentErr) {
+          toast.error('Не удалось сгенерировать QR-код для оплаты.')
+          navigate(`/order/${response.id}`)
+          clearCart()
+        }
+      } else {
+        clearCart()
+        toast.success('Заказ успешно оформлен!')
+        navigate(`/order/${response.id}`)
+      }
     } catch (error: any) {
       toast.error('Ошибка при оформлении заказа', {
         description: error.response?.data?.message || 'Попробуйте позже',
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentQR(null)
+    clearCart()
+    if (showPaymentQR) {
+      navigate(`/order/${showPaymentQR.orderId}`)
     }
   }
 
@@ -163,7 +247,11 @@ export function CheckoutPage() {
               <h2 className="text-xl font-bold">Доставка</h2>
             </div>
 
-            <RadioGroup defaultValue="DELIVERY" className="grid grid-cols-2 gap-4" onValueChange={(val) => register('deliveryType').onChange({ target: { value: val, name: 'deliveryType' } })}>
+            <RadioGroup 
+              defaultValue="DELIVERY" 
+              className="grid grid-cols-2 gap-4" 
+              onValueChange={(val) => setValue('deliveryType', val as 'DELIVERY' | 'PICKUP')}
+            >
               <label className={cn(
                 "flex flex-col gap-2 p-6 rounded-2xl border-2 cursor-pointer transition-all",
                 deliveryType === 'DELIVERY' ? "border-[var(--color-brand)] bg-[var(--color-brand-light)]/20" : "border-gray-100 bg-white"
@@ -180,20 +268,43 @@ export function CheckoutPage() {
                 <RadioGroupItem value="PICKUP" className="sr-only" />
                 <Calendar className={cn("h-6 w-6", deliveryType === 'PICKUP' ? "text-[var(--color-brand)]" : "text-gray-400")} />
                 <span className="font-bold">Самовывоз</span>
-                <span className="text-xs text-neutral-500 font-medium">г. Москва, ул. Арбат 1</span>
+                <span className="text-xs text-neutral-500 font-medium">{storeAddress}</span>
               </label>
             </RadioGroup>
 
             {deliveryType === 'DELIVERY' && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                <Label htmlFor="address" className="font-semibold text-sm">Адрес доставки</Label>
-                <Input 
-                  id="address" 
-                  placeholder="Улица, дом, квартира" 
-                  className="h-12 rounded-xl"
-                  {...register('address')}
-                />
-                {errors.address && <p className="text-xs text-red-500 font-medium">{errors.address.message}</p>}
+              <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="font-semibold text-sm">Адрес доставки</Label>
+                  <Input 
+                    id="address" 
+                    placeholder="Улица, дом, квартира" 
+                    className="h-12 rounded-xl"
+                    {...register('address')}
+                  />
+                  {errors.address && <p className="text-xs text-red-500 font-medium">{errors.address.message}</p>}
+                </div>
+                
+                <div className="space-y-3">
+                  <Label className="font-semibold text-sm">Время доставки (сегодня)</Label>
+                  <RadioGroup 
+                    onValueChange={(val) => setValue('deliverySlotId', val)}
+                    className="grid grid-cols-2 gap-3"
+                  >
+                    {slots.map(slot => (
+                      <label key={slot.id} className="relative flex cursor-pointer rounded-xl border bg-white p-4 shadow-sm hover:bg-slate-50 focus:outline-none">
+                        <RadioGroupItem value={slot.id} className="sr-only" />
+                        <span className="flex flex-1">
+                          <span className="flex flex-col">
+                            <span className="block text-sm font-bold text-gray-900">{slot.startTime.substring(0,5)} - {slot.endTime.substring(0,5)}</span>
+                            <span className="mt-1 flex items-center text-xs text-gray-500">Свободно: {slot.remainingCapacity}</span>
+                          </span>
+                        </span>
+                        <CheckCircle2 className="h-5 w-5 text-brand opacity-0 transition-opacity peer-checked:opacity-100" />
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </div>
               </div>
             )}
           </section>
@@ -205,11 +316,18 @@ export function CheckoutPage() {
               <h2 className="text-xl font-bold">Оплата</h2>
             </div>
             
-            <RadioGroup defaultValue="ONLINE" className="space-y-3">
+            <RadioGroup 
+              value={paymentMethod} 
+              className="space-y-3"
+              onValueChange={(val) => setValue('paymentMethod', val as 'ONLINE' | 'CARD' | 'CASH')}
+            >
               {['ONLINE', 'CARD', 'CASH'].map((method) => (
                  <label 
                   key={method}
-                  className="flex items-center justify-between p-5 rounded-2xl border border-gray-100 bg-white hover:border-[var(--color-brand)] transition-all cursor-pointer group"
+                  className={cn(
+                    "flex items-center justify-between p-5 rounded-2xl border transition-all cursor-pointer group",
+                    paymentMethod === method ? "border-[var(--color-brand)] bg-[var(--color-brand-light)]/20" : "border-gray-100 bg-white"
+                  )}
                 >
                   <div className="flex items-center gap-4">
                     <RadioGroupItem value={method} className="text-[var(--color-brand)]" />
@@ -256,6 +374,14 @@ export function CheckoutPage() {
                     {shipping === 0 ? 'Бесплатно' : `${shipping} ₽`}
                   </span>
                 </div>
+                
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm font-medium text-rose-500">
+                    <span>Скидка ({discountPercent}% по лояльности):</span>
+                    <span className="font-bold">-{discountAmount} ₽</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between text-lg font-black pt-2">
                   <span className="uppercase tracking-widest text-[10px] text-neutral-400 self-end mb-1">Итоговая сумма:</span>
                   <span className="text-3xl font-display">{finalPrice} <span className="text-lg text-[var(--color-brand)]">₽</span></span>
@@ -283,6 +409,21 @@ export function CheckoutPage() {
            </div>
         </div>
       </form>
+
+      {showPaymentQR && (
+        <PaymentQRModal
+          orderId={showPaymentQR.orderId}
+          orderNumber={showPaymentQR.orderNumber}
+          amount={showPaymentQR.amount}
+          qrData={showPaymentQR.qrData}
+          onSuccess={handlePaymentSuccess}
+          onClose={() => {
+            setShowPaymentQR(null)
+            clearCart()
+            navigate(`/order/${showPaymentQR.orderId}`)
+          }}
+        />
+      )}
     </div>
   )
 }
