@@ -8,11 +8,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import ru.florify.common.event.OrderCreatedEvent;
 import ru.florify.order.application.command.CreateOrderCommand;
 import ru.florify.order.application.port.out.OrderEventPublisher;
 import ru.florify.order.application.port.out.OrderNumberGenerator;
 import ru.florify.order.application.port.out.OrderRepository;
-import ru.florify.order.domain.event.OrderCreatedEvent;
 import ru.florify.order.domain.model.*;
 
 import java.time.Clock;
@@ -35,6 +36,8 @@ class CreateOrderInteractorTest {
     private OrderEventPublisher eventPublisher;
     @Mock
     private OrderNumberGenerator orderNumberGenerator;
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
     @Mock
     private Clock clock;
 
@@ -59,11 +62,12 @@ class CreateOrderInteractorTest {
                 null,                    // guestPhone
                 null,                    // guestName
                 List.of(),               // items
-                0,                       // bonusPointsUsed (int)
+                0,                       // bonusPointsUsed
                 OrderType.PICKUP,        // type
                 OrderSource.WEB,         // source
                 PaymentMethod.CASH,      // paymentMethod
                 "idemp-123",             // idempotencyKey
+                null,                    // status
                 null,                    // deliveryAddress
                 null,                    // deliverySlotId
                 null                     // deliveryZoneId
@@ -83,10 +87,10 @@ class CreateOrderInteractorTest {
 
         verify(orderRepository).save(any(Order.class));
 
-        ArgumentCaptor<OrderCreatedEvent> payloadCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
-        verify(eventPublisher).publish(eq("orders.order.created"), eq(result.getId().toString()), payloadCaptor.capture());
-
-        OrderCreatedEvent payload = payloadCaptor.getValue();
-        assertEquals(result.getId(), payload.orderId());
+        // Verify Kafka publish
+        verify(eventPublisher).publish(eq("orders.order.created"), eq(result.getId().toString()), any(OrderCreatedEvent.class));
+        
+        // Verify Spring internal event publish
+        verify(applicationEventPublisher).publishEvent(any(OrderCreatedEvent.class));
     }
 }

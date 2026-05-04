@@ -44,6 +44,8 @@ public interface DeliveryTaskRepository {
      */
     List<DeliveryTask> findByStatusAndDate(TaskStatus status, LocalDate date);
 
+    List<DeliveryTask> findByStatusesAndDate(java.util.Collection<TaskStatus> statuses, LocalDate date);
+
     /**
      * Удалить задачу по ID заказа (при отмене заказа до финального статуса).
      */

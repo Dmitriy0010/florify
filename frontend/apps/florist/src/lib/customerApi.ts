@@ -14,6 +14,12 @@ export const customerApi = {
     const { data } = await apiClient.get<PagedResponse<Customer>>('/v1/customers', { params });
     return data;
   },
+  search: async (query: string) => {
+    const { data } = await apiClient.get<Customer[]>('/v1/customers/search', {
+      params: { query }
+    });
+    return data;
+  },
   getCustomerById: async (id: string) => {
     const { data } = await apiClient.get<Customer>(`/v1/customers/${id}`);
     return data;

@@ -53,7 +53,6 @@ public class StoreController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'FLORIST', 'CASHIER')")
     @Operation(summary = "Получить список точек продаж")
     public List<StoreResponse> getAllStores(@RequestParam(required = false, defaultValue = "false") boolean includeInactive) {
         return storeRepository.findAll().stream()
@@ -63,7 +62,6 @@ public class StoreController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'FLORIST', 'CASHIER')")
     @Operation(summary = "Получить информацию о конкретной точке")
     public StoreResponse getStore(@PathVariable UUID id) {
         return storeRepository.findById(id)

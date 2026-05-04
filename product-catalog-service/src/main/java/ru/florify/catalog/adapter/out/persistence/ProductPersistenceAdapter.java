@@ -53,8 +53,23 @@ public class ProductPersistenceAdapter implements ProductRepository, CategoryRep
 
     @Override
     public PagedResult<Product> findAll(GetCatalogQuery query) {
+        return findWithSpec(query, null);
+    }
+
+    @Override
+    public PagedResult<Product> findAllWithIds(GetCatalogQuery query, List<UUID> ids) {
+        if (ids.isEmpty()) {
+            return new PagedResult<>(List.of(), query.page(), query.size(), 0);
+        }
+        return findWithSpec(query, ids);
+    }
+
+    private PagedResult<Product> findWithSpec(GetCatalogQuery query, List<UUID> ids) {
         Specification<ProductJpaEntity> spec = Specification.where(null);
 
+        if (ids != null) {
+            spec = spec.and((root, q, cb) -> root.get("id").in(ids));
+        }
         if (query.categoryId() != null) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("category").get("id"), query.categoryId()));
         }
@@ -78,6 +93,7 @@ public class ProductPersistenceAdapter implements ProductRepository, CategoryRep
             page.getTotalElements()
         );
     }
+
 
     @Override
     public List<Product> findByCategoryId(UUID categoryId) {

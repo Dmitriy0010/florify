@@ -37,9 +37,11 @@ class OrderTest {
                 OrderType.DELIVERY,
                 OrderSource.WEB,
                 PaymentMethod.ONLINE,
+                OrderStatus.PENDING_STOCK, // status
                 "Test Address",          // deliveryAddress
                 null,                    // deliverySlotId
                 null,                    // deliveryZoneId
+                UUID.randomUUID(),       // storeId
                 Instant.now(clock)
         );
 

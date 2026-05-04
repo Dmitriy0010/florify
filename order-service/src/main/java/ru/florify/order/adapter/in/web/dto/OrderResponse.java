@@ -24,6 +24,10 @@ public record OrderResponse(
         OrderSource source,
         PaymentMethod paymentMethod,
         boolean isPaid,
+        String deliveryAddress,
+        UUID deliverySlotId,
+        String guestPhone,
+        String guestName,
         Instant createdAt,
         Instant updatedAt
 ) {

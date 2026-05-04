@@ -37,10 +37,10 @@ class GetCustomerListInteractorTest {
         // given
         GetCustomerListQuery query = new GetCustomerListQuery(null, null, null, 0, 10);
         PagedResult<Customer> expected = new PagedResult<>(List.of(mock(Customer.class)), 0, 10, 1);
-        when(customerRepository.findAll(query)).thenReturn(expected);
+        when(customerRepository.findAll(query, false)).thenReturn(expected);
 
         // when
-        PagedResult<Customer> result = interactor.execute(query);
+        PagedResult<Customer> result = interactor.execute(query, false);
 
         // then
         assertThat(result).isEqualTo(expected);

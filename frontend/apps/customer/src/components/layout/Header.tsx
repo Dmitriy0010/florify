@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
-import { ShoppingCart, User, Menu } from 'lucide-react'
+import { ShoppingCart, User, Menu, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
+import { useFavoritesStore } from '@/store/favoritesStore'
+import { StoreSelector } from './StoreSelector'
+
 import {
   Sheet,
   SheetContent,
@@ -12,21 +15,29 @@ import {
 
 export function Header() {
   const totalItems = useCartStore((state) => state.getTotalItems())
+  const totalFavorites = useFavoritesStore((state) => state.getTotalItems())
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
       <div className="container-custom">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-8 w-8 rounded-md bg-[var(--color-brand)] flex items-center justify-center transition-transform group-hover:scale-110">
-              <span className="text-white font-bold text-xl leading-none">F</span>
+          {/* Logo & Store */}
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="h-8 w-8 rounded-md bg-[var(--color-brand)] flex items-center justify-center transition-transform group-hover:scale-110">
+                <span className="text-white font-bold text-xl leading-none">F</span>
+              </div>
+              <span className="font-display font-semibold text-xl tracking-tight">
+                florify
+              </span>
+            </Link>
+            
+            <div className="hidden lg:block">
+              <StoreSelector />
             </div>
-            <span className="font-display font-semibold text-xl tracking-tight">
-              florify
-            </span>
-          </Link>
+          </div>
+
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
@@ -51,14 +62,28 @@ export function Header() {
           </nav>
           
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Favorites */}
+            <Link to="/account/favorites">
+              <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-all">
+                <Heart className="h-6 w-6" />
+                {totalFavorites > 0 && (
+                  <Badge 
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center p-0 text-[11px] font-bold bg-rose-500 hover:bg-rose-600 border-none shadow-sm shadow-rose-500/30"
+                  >
+                    {totalFavorites}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
+            
             {/* Cart */}
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative hover:bg-[var(--color-brand-light)] hover:text-[var(--color-brand)]">
-                <ShoppingCart className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-full hover:bg-[var(--color-brand-light)] hover:text-[var(--color-brand)] transition-all">
+                <ShoppingCart className="h-6 w-6" />
                 {totalItems > 0 && (
                   <Badge 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]"
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center p-0 text-[11px] font-bold bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] border-none shadow-sm shadow-[var(--color-brand)]/30"
                   >
                     {totalItems}
                   </Badge>
@@ -69,17 +94,17 @@ export function Header() {
             {/* User */}
             {isAuthenticated ? (
               <Link to="/account">
-                <Button variant="ghost" size="icon" className="hover:bg-[var(--color-brand-light)] hover:text-[var(--color-brand)]">
-                  <User className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full hover:bg-[var(--color-brand-light)] hover:text-[var(--color-brand)] transition-all">
+                  <User className="h-6 w-6" />
                 </Button>
               </Link>
             ) : (
               <Link to="/auth/login">
-                <Button variant="ghost" className="hidden sm:flex text-sm font-medium hover:text-[var(--color-brand)]">
+                <Button variant="ghost" className="hidden sm:flex h-11 px-5 rounded-full text-sm font-bold hover:text-[var(--color-brand)] hover:bg-[var(--color-brand-light)] transition-all">
                   Войти
                 </Button>
-                <Button variant="ghost" size="icon" className="sm:hidden">
-                  <User className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="sm:hidden h-11 w-11 rounded-full">
+                  <User className="h-6 w-6" />
                 </Button>
               </Link>
             )}

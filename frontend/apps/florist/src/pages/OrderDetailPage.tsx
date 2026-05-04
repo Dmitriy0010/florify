@@ -13,8 +13,10 @@ import {
   ShoppingBag,
   CreditCard,
   RefreshCw,
+  Truck,
 } from 'lucide-react';
 import { ordersApi } from '../lib/ordersApi';
+import { deliveryApi } from '../lib/deliveryApi';
 import { useAuthStore } from '../store/authStore';
 import { useOfflineStore } from '../store/offlineStore';
 import { enqueueMutation } from '../lib/offlineQueue';
@@ -33,6 +35,13 @@ export default function OrderDetailPage() {
     queryKey: ['orders', id],
     queryFn: () => ordersApi.getById(id!),
     enabled: !!id,
+  });
+
+  const { data: deliveryTask } = useQuery({
+    queryKey: ['deliveryTask', id],
+    queryFn: () => deliveryApi.getTaskByOrderId(id!),
+    enabled: !!id && order?.type === 'DELIVERY',
+    retry: false
   });
 
   const takeMutation = useMutation({
@@ -67,10 +76,11 @@ export default function OrderDetailPage() {
   }
 
   const isMine = order.assignedFloristId === myId;
-  const isConfirmed = order.status === 'CONFIRMED';
+  const isConfirmed = order.status === 'CONFIRMED' || order.status === 'NEW';
   const isInProgress = order.status === 'IN_PROGRESS';
 
   const statusMap: Record<string, string> = {
+    'NEW': 'Новый (Онлайн)',
     'CONFIRMED': 'Новый',
     'IN_PROGRESS': 'Сборка',
     'READY': 'Готов',
@@ -80,7 +90,7 @@ export default function OrderDetailPage() {
   };
 
   return (
-    <div className="flex flex-col h-full gap-4 animate-fade-in">
+    <div className="flex flex-col h-full gap-4 animate-fade-in relative">
       {/* Header */}
       <div className="flex items-center justify-between bg-white p-6 rounded-2xl border border-gray-200">
         <div className="flex items-center gap-4">
@@ -120,9 +130,22 @@ export default function OrderDetailPage() {
             <div>
               <p className="text-lg font-black text-slate-900">{order.customerName || 'Обычный клиент'}</p>
               {order.type === 'DELIVERY' && (
-                <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100 flex gap-3">
-                  <MapPin size={18} className="text-rose-500 shrink-0 mt-0.5" />
-                  <p className="text-sm font-bold text-slate-700">{order.address || 'Адрес не указан'}</p>
+                <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-3">
+                  <div className="flex gap-3">
+                    <MapPin size={18} className="text-rose-500 shrink-0 mt-0.5" />
+                    <p className="text-sm font-bold text-slate-700">{order.deliveryAddress || order.address || 'Адрес не указан'}</p>
+                  </div>
+                  {deliveryTask && (
+                    <div className="flex gap-3 items-center border-t border-slate-200 pt-3 mt-1">
+                      <Truck size={16} className="text-slate-400 shrink-0" />
+                      <div className="flex-1 flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Статус доставки</span>
+                        <span className="text-[11px] font-black uppercase text-brand px-2 py-1 bg-brand/10 rounded-md">
+                          {deliveryTask.status}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -141,7 +164,7 @@ export default function OrderDetailPage() {
               <h3 className="text-[10px] font-black uppercase text-white/50 tracking-widest">Оплата</h3>
             </div>
             <div className="flex-1 flex flex-col justify-center">
-              <p className="text-4xl font-black tracking-tighter">{(order.totalPrice || 0).toLocaleString()} <span className="text-lg opacity-40">₽</span></p>
+              <p className="text-4xl font-black tracking-tighter">{(order.finalAmount || 0).toLocaleString()} <span className="text-lg opacity-40">₽</span></p>
               <div className="flex gap-2 mt-6">
                 <span className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-black uppercase border border-white/10 tracking-widest">Наличные</span>
                 <span className="px-3 py-1 bg-emerald-500 rounded-lg text-[9px] font-black uppercase tracking-widest">Оплачено</span>
@@ -168,7 +191,7 @@ export default function OrderDetailPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-black text-slate-900">x{item.quantity}</p>
-                  <p className="text-sm font-black text-emerald-600">{item.price.toLocaleString()} ₽</p>
+                  <p className="text-sm font-black text-emerald-600">{(item.unitPrice || 0).toLocaleString()} ₽</p>
                 </div>
               </div>
             ))}
@@ -176,7 +199,7 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <div className="fixed bottom-24 left-4 right-4 flex justify-center pointer-events-none z-[100]">
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-50 px-4">
         <div className="w-full max-w-lg pointer-events-auto">
           {isConfirmed && (
             <button 

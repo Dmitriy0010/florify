@@ -23,7 +23,7 @@ class DeliveryTaskTest {
                 .status(TaskStatus.CREATED)
                 .createdAt(NOW)
                 .updatedAt(NOW)
-                .version(0)
+                
                 .build();
     }
 

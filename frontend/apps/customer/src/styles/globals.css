@@ -10,8 +10,8 @@
   --color-bg-overlay:   rgba(0, 0, 0, 0.4);  /* Модальные окна */
 
   /* Границы */
-  --color-border:       #E8E6E1;
-  --color-border-hover: #D1CFC9;
+  --color-border:       #EAE6DF;
+  --color-border-hover: #D5D1C7;
   --color-border-focus: #3D7A5E;  /* Brand-цвет для фокуса */
 
   /* Текст */
@@ -111,8 +111,11 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: var(--color-bg-canvas);
     @apply font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {

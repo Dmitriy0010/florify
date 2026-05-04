@@ -48,17 +48,25 @@ export default function InventoryPage() {
     queryFn: () => catalogApi.getProducts({ size: 1000 }),
   });
 
-  const { data: stock = [], isLoading: stockLoading } = useQuery({
+  const { data: stock = [], isLoading: stockLoading, refetch: refetchStock } = useQuery({
     queryKey: ['inventory', 'all'],
     queryFn: inventoryApi.getAllBalances,
+    refetchInterval: 30_000,
+    staleTime: 10_000,
   });
 
   const items = useMemo(() => {
-    let list = catalog.map(p => ({
-      ...p,
-      _img: resolveImg(p.imageUrl, p.name),
-      _qty: stock.find(s => s.productId === p.id)?.quantity ?? 0,
-    }));
+    let list = catalog.map(p => {
+      // stock entries may use productId OR id field depending on backend
+      const stockEntry = stock.find(
+        s => s.productId === p.id || (s as any).id === p.id
+      );
+      return {
+        ...p,
+        _img: resolveImg(p.imageUrl, p.name),
+        _qty: stockEntry?.quantity ?? 0,
+      };
+    });
 
     if (search) {
       const s = search.toLowerCase();
@@ -70,7 +78,7 @@ export default function InventoryPage() {
     return list;
   }, [catalog, stock, search]);
 
-  const lowStockCount = stock.filter(s => s.quantity < 5).length;
+  const lowStockCount = items.filter(i => i._qty < 5).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12, overflow: 'hidden' }}
@@ -112,6 +120,17 @@ export default function InventoryPage() {
               transition: 'all 0.15s',
             }}>
             <RefreshCw size={14} /> Инвентаризация
+          </button>
+          <button
+            onClick={() => refetchStock()}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 12px', borderRadius: 10,
+              background: 'white', color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}>
+            <RefreshCw size={13} /> Обновить
           </button>
           <div style={{ width: 1, height: 24, background: 'var(--color-border)', margin: '0 4px' }} />
           <Link to="/pos" style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:10, border:'1px solid var(--color-border)', background:'white', color:'var(--color-text-secondary)', fontSize:12, fontWeight:600, textDecoration:'none' }}>

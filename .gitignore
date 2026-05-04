@@ -25,8 +25,16 @@ dist/
 # Logs
 *.log
 test_output.txt
+test_output.log
 test_results.txt
 test_debug.txt
+build_error.log
+
+# Large generated context files
+LLM_CONTEXT_PROD.txt
+
+# Scratch / temp
+scratch/
 
 # Docker
 .dockerignore

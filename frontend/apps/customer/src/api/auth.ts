@@ -3,7 +3,7 @@ import type { LoginResponse, User } from './types'
 
 export const authApi = {
   login: async (credentials: any) => {
-    const { data } = await apiClient.post<LoginResponse>('/api/auth/login', {
+    const { data } = await apiClient.post<LoginResponse>('/api/v1/auth/login', {
       ...credentials,
       deviceInfo: 'web-browser',
     })
@@ -11,7 +11,7 @@ export const authApi = {
   },
 
   register: async (credentials: any) => {
-    const { data } = await apiClient.post<LoginResponse>('/api/auth/register', {
+    const { data } = await apiClient.post<LoginResponse>('/api/v1/auth/register', {
       ...credentials,
       deviceInfo: 'web-browser',
     })
@@ -19,7 +19,7 @@ export const authApi = {
   },
   
   getMe: async () => {
-    const { data } = await apiClient.get<User>('/api/auth/me')
+    const { data } = await apiClient.get<User>('/api/v1/auth/me')
     return data
   },
 }

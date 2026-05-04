@@ -37,15 +37,17 @@ public class ProductController {
     @GetMapping
     public PagedResult<ProductResponse> getCatalog(
             @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) UUID storeId,
             @RequestParam(required = false) String searchTerm,
             @RequestParam(required = false, defaultValue = "true") Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         return mapper.toPagedResponse(getCatalogUseCase.execute(
-                new GetCatalogQuery(categoryId, searchTerm, active, page, size)
+                new GetCatalogQuery(categoryId, storeId, searchTerm, active, page, size)
         ));
     }
+
 
     @GetMapping("/{id}")
     public ProductResponse getProduct(@PathVariable UUID id) {

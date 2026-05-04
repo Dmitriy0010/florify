@@ -21,7 +21,7 @@ class DeliverySlotTest {
                 .endTime(LocalTime.of(12, 0))
                 .maxCapacity(maxCapacity)
                 .currentLoad(0)
-                .version(0)
+                
                 .build();
     }
 
