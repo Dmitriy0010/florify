@@ -47,6 +47,12 @@ public class MediaFile {
      * Помечает файл как удалённый.
      */
     public void markDeleted() {
+        if (this.status == MediaFileStatus.DELETED) {
+            throw new MediaFileDeletedException(this.id);
+        }
+        if (this.status == MediaFileStatus.ERROR) {
+            throw new IllegalStateException("Cannot mark file as DELETED when it is in ERROR status");
+        }
         this.status = MediaFileStatus.DELETED;
     }
 
@@ -56,6 +62,9 @@ public class MediaFile {
     public void markError() {
         if (this.status == MediaFileStatus.DELETED) {
             throw new IllegalStateException("Cannot mark file as ERROR when it is DELETED");
+        }
+        if (this.status == MediaFileStatus.ERROR) {
+            throw new IllegalStateException("Cannot mark file as ERROR when it is already in ERROR status");
         }
         this.status = MediaFileStatus.ERROR;
     }
