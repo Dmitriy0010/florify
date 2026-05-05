@@ -12,5 +12,6 @@ public record UpdateDeliveryZoneCommand(
         String polygon,
         BigDecimal deliveryFee,
         BigDecimal minOrderAmount,
+        boolean active,
         UUID performerId
 ) {}

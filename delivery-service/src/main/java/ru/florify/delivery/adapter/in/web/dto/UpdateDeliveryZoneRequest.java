@@ -13,5 +13,6 @@ public record UpdateDeliveryZoneRequest(
         @NotBlank String name,
         String polygon,
         @NotNull @DecimalMin("0.00") BigDecimal deliveryFee,
-        @NotNull @DecimalMin("0.00") BigDecimal minOrderAmount
+        @NotNull @DecimalMin("0.00") BigDecimal minOrderAmount,
+        boolean active
 ) {}

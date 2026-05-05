@@ -13,7 +13,7 @@ import {
   AlertCircle,
   BarChart3
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { TimesheetService, TimesheetEntry } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { 

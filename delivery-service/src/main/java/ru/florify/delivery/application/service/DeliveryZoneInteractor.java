@@ -48,7 +48,7 @@ public class DeliveryZoneInteractor implements DeliveryZoneUseCase {
                 .polygon(command.polygon())
                 .deliveryFee(command.deliveryFee())
                 .minOrderAmount(command.minOrderAmount())
-                .active(true)
+                .active(command.active())
                 .createdAt(Instant.now(clock))
                 .build();
 
@@ -73,6 +73,7 @@ public class DeliveryZoneInteractor implements DeliveryZoneUseCase {
                 .polygon(command.polygon())
                 .deliveryFee(command.deliveryFee())
                 .minOrderAmount(command.minOrderAmount())
+                .active(command.active())
                 .build();
 
         return zoneRepository.save(updated);
