@@ -14,7 +14,8 @@ import {
   User,
   AlertCircle
 } from 'lucide-react';
-import { deliveryApi, DeliveryTask } from '../lib/deliveryApi';
+import { deliveryApi } from '../lib/deliveryApi';
+import type { DeliveryTask } from '../lib/deliveryApi';
 import { ordersApi } from '../lib/ordersApi';
 import { useAuthStore } from '../store/authStore';
 import { cn } from '../lib/utils';

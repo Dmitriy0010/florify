@@ -1,0 +1,1286 @@
+{
+  "product_categories": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR(100) NOT NULL UNIQUE"
+    },
+    {
+      "name": "description",
+      "type": "TEXT"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT true"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    }
+  ],
+  "products": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+    },
+    {
+      "name": "sku",
+      "type": "VARCHAR(50) NOT NULL UNIQUE"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR(200) NOT NULL"
+    },
+    {
+      "name": "description",
+      "type": "TEXT"
+    },
+    {
+      "name": "category_id",
+      "type": "UUID REFERENCES product_categories(id)"
+    },
+    {
+      "name": "unit",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "current_price",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "image_url",
+      "type": "VARCHAR(500)"
+    },
+    {
+      "name": "default_shelf_life_days",
+      "type": "INTEGER NOT NULL DEFAULT 7"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT true"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    },
+    {
+      "name": "last_synced_at",
+      "type": "TIMESTAMPTZ"
+    }
+  ],
+  "users": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "email",
+      "type": "VARCHAR(255) UNIQUE NOT NULL"
+    },
+    {
+      "name": "phone",
+      "type": "VARCHAR(20) UNIQUE"
+    },
+    {
+      "name": "first_name",
+      "type": "VARCHAR(100)"
+    },
+    {
+      "name": "last_name",
+      "type": "VARCHAR(100)"
+    },
+    {
+      "name": "password_hash",
+      "type": "VARCHAR(255) NOT NULL"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    }
+  ],
+  "user_roles": [
+    {
+      "name": "user_id",
+      "type": "UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "role",
+      "type": "VARCHAR(50) NOT NULL"
+    }
+  ],
+  "refresh_tokens": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "user_id",
+      "type": "UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "token_hash",
+      "type": "VARCHAR(255) NOT NULL UNIQUE"
+    },
+    {
+      "name": "expires_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "revoked",
+      "type": "BOOLEAN NOT NULL DEFAULT FALSE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    }
+  ],
+  "stores": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR(100) NOT NULL"
+    },
+    {
+      "name": "address",
+      "type": "VARCHAR(255) NOT NULL"
+    },
+    {
+      "name": "phone",
+      "type": "VARCHAR(20)"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+    }
+  ],
+  "customers": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+    },
+    {
+      "name": "phone",
+      "type": "VARCHAR(20)"
+    },
+    {
+      "name": "email",
+      "type": "VARCHAR(255)"
+    },
+    {
+      "name": "first_name",
+      "type": "VARCHAR(100) NOT NULL"
+    },
+    {
+      "name": "last_name",
+      "type": "VARCHAR(100)"
+    },
+    {
+      "name": "birth_date",
+      "type": "DATE"
+    },
+    {
+      "name": "gender",
+      "type": "VARCHAR(20) NOT NULL DEFAULT"
+    },
+    {
+      "name": "source",
+      "type": "VARCHAR(20) NOT NULL DEFAULT"
+    },
+    {
+      "name": "tags",
+      "type": "TEXT[] NOT NULL DEFAULT"
+    },
+    {
+      "name": "user_id",
+      "type": "UUID"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT true"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "loyalty_accounts": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+    },
+    {
+      "name": "customer_id",
+      "type": "UUID NOT NULL REFERENCES customers(id)"
+    },
+    {
+      "name": "tier",
+      "type": "VARCHAR(20) NOT NULL DEFAULT"
+    },
+    {
+      "name": "points_balance",
+      "type": "INTEGER NOT NULL DEFAULT 0 CHECK (points_balance"
+    },
+    {
+      "name": "reserved_points",
+      "type": "INTEGER NOT NULL DEFAULT 0 CHECK (reserved_points"
+    },
+    {
+      "name": "total_spent",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "loyalty_transactions": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+    },
+    {
+      "name": "loyalty_account_id",
+      "type": "UUID NOT NULL REFERENCES loyalty_accounts(id)"
+    },
+    {
+      "name": "order_id",
+      "type": "UUID"
+    },
+    {
+      "name": "type",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "points",
+      "type": "INTEGER NOT NULL"
+    },
+    {
+      "name": "description",
+      "type": "VARCHAR(500)"
+    },
+    {
+      "name": "occurred_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "orders": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "order_number",
+      "type": "VARCHAR(20) UNIQUE NOT NULL"
+    },
+    {
+      "name": "idempotency_key",
+      "type": "VARCHAR(64)"
+    },
+    {
+      "name": "customer_id",
+      "type": "UUID"
+    },
+    {
+      "name": "guest_phone",
+      "type": "VARCHAR(20)"
+    },
+    {
+      "name": "guest_name",
+      "type": "VARCHAR(100)"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(30) NOT NULL"
+    },
+    {
+      "name": "total_amount",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "discount_amount",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "bonus_points_used",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "final_amount",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "type",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "source",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "payment_method",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "is_paid",
+      "type": "BOOLEAN NOT NULL DEFAULT FALSE"
+    },
+    {
+      "name": "florist_id",
+      "type": "UUID"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    },
+    {
+      "name": "delivery_address",
+      "type": "TEXT"
+    },
+    {
+      "name": "delivery_slot_id",
+      "type": "UUID"
+    },
+    {
+      "name": "delivery_zone_id",
+      "type": "UUID"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "order_items": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "order_id",
+      "type": "UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "product_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "product_name",
+      "type": "VARCHAR(200) NOT NULL"
+    },
+    {
+      "name": "quantity",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "unit_price",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "line_total",
+      "type": "DECIMAL(10"
+    }
+  ],
+  "stock_balances": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "product_id",
+      "type": "UUID NOT NULL REFERENCES products(id) ON DELETE RESTRICT"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    },
+    {
+      "name": "quantity_in_stock",
+      "type": "NUMERIC(12"
+    },
+    {
+      "name": "average_cost",
+      "type": "NUMERIC(10"
+    }
+  ],
+  "stock_batches": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "product_id",
+      "type": "UUID NOT NULL REFERENCES products(id)"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    },
+    {
+      "name": "quantity_received",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "quantity_remaining",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "unit_cost",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "received_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "expires_at",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "source_document_id",
+      "type": "VARCHAR(100) NOT NULL"
+    }
+  ],
+  "stock_transactions": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "product_id",
+      "type": "UUID NOT NULL REFERENCES products(id)"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    },
+    {
+      "name": "type",
+      "type": "VARCHAR(30) NOT NULL"
+    },
+    {
+      "name": "quantity",
+      "type": "NUMERIC(12"
+    },
+    {
+      "name": "cost_basis",
+      "type": "NUMERIC(10"
+    },
+    {
+      "name": "total_value",
+      "type": "NUMERIC(14"
+    },
+    {
+      "name": "write_off_reason",
+      "type": "VARCHAR(30)"
+    },
+    {
+      "name": "comment",
+      "type": "TEXT"
+    },
+    {
+      "name": "source_document_id",
+      "type": "VARCHAR(255) NOT NULL UNIQUE"
+    },
+    {
+      "name": "performer_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR(255) NOT NULL"
+    },
+    {
+      "name": "contact_person",
+      "type": "VARCHAR(255)"
+    },
+    {
+      "name": "phone",
+      "type": "VARCHAR(50)"
+    },
+    {
+      "name": "email",
+      "type": "VARCHAR(255)"
+    },
+    {
+      "name": "address",
+      "type": "TEXT"
+    },
+    {
+      "name": "tax_id",
+      "type": "VARCHAR(50) UNIQUE"
+    },
+    {
+      "name": "payment_terms",
+      "type": "VARCHAR(50) NOT NULL"
+    },
+    {
+      "name": "rating",
+      "type": "INTEGER CHECK (rating BETWEEN 1 AND 5)"
+    },
+    {
+      "name": "notes",
+      "type": "TEXT"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "purchase_invoices": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "invoice_number",
+      "type": "VARCHAR(100) NOT NULL"
+    },
+    {
+      "name": "supplier_id",
+      "type": "UUID NOT NULL REFERENCES suppliers(id)"
+    },
+    {
+      "name": "supplier_name",
+      "type": "VARCHAR(255) NOT NULL"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(50) NOT NULL"
+    },
+    {
+      "name": "total_amount",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "planned_delivery_at",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "received_at",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "comment",
+      "type": "TEXT"
+    },
+    {
+      "name": "created_by",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "purchase_invoice_items": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "invoice_id",
+      "type": "UUID NOT NULL REFERENCES purchase_invoices(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "product_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "product_name",
+      "type": "VARCHAR(255) NOT NULL"
+    },
+    {
+      "name": "ordered_quantity",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "received_quantity",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "unit_price",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "expires_at",
+      "type": "DATE"
+    }
+  ],
+  "employees": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "user_id",
+      "type": "UUID NOT NULL UNIQUE"
+    },
+    {
+      "name": "first_name",
+      "type": "VARCHAR(120) NOT NULL"
+    },
+    {
+      "name": "last_name",
+      "type": "VARCHAR(120) NOT NULL"
+    },
+    {
+      "name": "phone",
+      "type": "VARCHAR(50)"
+    },
+    {
+      "name": "role",
+      "type": "VARCHAR(50) NOT NULL"
+    },
+    {
+      "name": "hire_date",
+      "type": "DATE NOT NULL"
+    },
+    {
+      "name": "dismiss_date",
+      "type": "DATE"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+    },
+    {
+      "name": "avatar_url",
+      "type": "VARCHAR(500)"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    }
+  ],
+  "employee_salary_configs": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "employee_id",
+      "type": "UUID NOT NULL REFERENCES employees(id)"
+    },
+    {
+      "name": "type",
+      "type": "VARCHAR(50) NOT NULL"
+    },
+    {
+      "name": "base_amount",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "sales_percent",
+      "type": "NUMERIC(7"
+    },
+    {
+      "name": "bonus_per_order",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "valid_from",
+      "type": "DATE NOT NULL"
+    }
+  ],
+  "employee_timesheet": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "employee_id",
+      "type": "UUID NOT NULL REFERENCES employees(id)"
+    },
+    {
+      "name": "date",
+      "type": "DATE NOT NULL"
+    },
+    {
+      "name": "hours_worked",
+      "type": "NUMERIC(8"
+    }
+  ],
+  "employee_salary_statements": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "employee_id",
+      "type": "UUID NOT NULL REFERENCES employees(id)"
+    },
+    {
+      "name": "period",
+      "type": "VARCHAR(7) NOT NULL"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    },
+    {
+      "name": "base_salary",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "sales_bonus",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "order_bonus",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "manual_bonus",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "deductions",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "total_payout",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(30) NOT NULL"
+    },
+    {
+      "name": "approved_by",
+      "type": "UUID"
+    },
+    {
+      "name": "paid_at",
+      "type": "TIMESTAMPTZ"
+    }
+  ],
+  "delivery_zones": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR(255) NOT NULL"
+    },
+    {
+      "name": "polygon",
+      "type": "TEXT"
+    },
+    {
+      "name": "delivery_fee",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "min_order_amount",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "active",
+      "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "delivery_slots": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "date",
+      "type": "DATE NOT NULL"
+    },
+    {
+      "name": "start_time",
+      "type": "TIME NOT NULL"
+    },
+    {
+      "name": "end_time",
+      "type": "TIME NOT NULL"
+    },
+    {
+      "name": "max_capacity",
+      "type": "INTEGER NOT NULL"
+    },
+    {
+      "name": "current_load",
+      "type": "INTEGER NOT NULL DEFAULT 0"
+    }
+  ],
+  "delivery_tasks": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "order_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "slot_id",
+      "type": "UUID REFERENCES delivery_slots(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "zone_id",
+      "type": "UUID REFERENCES delivery_zones(id) ON DELETE SET NULL"
+    },
+    {
+      "name": "courier_id",
+      "type": "UUID"
+    },
+    {
+      "name": "delivery_address",
+      "type": "TEXT NOT NULL"
+    },
+    {
+      "name": "latitude",
+      "type": "DOUBLE PRECISION"
+    },
+    {
+      "name": "longitude",
+      "type": "DOUBLE PRECISION"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(50) NOT NULL"
+    },
+    {
+      "name": "estimated_arrival",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "actual_delivered_at",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "failure_reason",
+      "type": "TEXT"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMPTZ"
+    }
+  ],
+  "financial_transactions": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "type",
+      "type": "VARCHAR(30) NOT NULL"
+    },
+    {
+      "name": "amount",
+      "type": "DECIMAL(19"
+    },
+    {
+      "name": "reference_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "description",
+      "type": "TEXT"
+    },
+    {
+      "name": "performed_by",
+      "type": "UUID"
+    },
+    {
+      "name": "occurred_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "analytics_order_facts": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "order_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "customer_id",
+      "type": "UUID"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL REFERENCES stores(id)"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "total_amount",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "cogs_amount",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "gross_profit",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "assigned_employee_id",
+      "type": "UUID"
+    },
+    {
+      "name": "order_source",
+      "type": "VARCHAR(20)"
+    },
+    {
+      "name": "item_count",
+      "type": "INTEGER DEFAULT 0"
+    },
+    {
+      "name": "completed_at",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "cancelled_at",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "cancellation_reason",
+      "type": "TEXT"
+    },
+    {
+      "name": "recorded_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "analytics_cost_facts": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "cost_type",
+      "type": "VARCHAR(20) NOT NULL"
+    },
+    {
+      "name": "source_ref_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "store_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "occurred_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "recorded_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "amount",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "quantity",
+      "type": "NUMERIC(19"
+    },
+    {
+      "name": "reason",
+      "type": "VARCHAR(50)"
+    },
+    {
+      "name": "supplier_id",
+      "type": "UUID"
+    },
+    {
+      "name": "supplier_name",
+      "type": "VARCHAR(255)"
+    },
+    {
+      "name": "item_count",
+      "type": "INTEGER"
+    },
+    {
+      "name": "employee_id",
+      "type": "UUID"
+    },
+    {
+      "name": "employee_name",
+      "type": "VARCHAR(255)"
+    },
+    {
+      "name": "employee_role",
+      "type": "VARCHAR(100)"
+    },
+    {
+      "name": "period_start",
+      "type": "DATE"
+    },
+    {
+      "name": "period_end",
+      "type": "DATE"
+    },
+    {
+      "name": "product_id",
+      "type": "UUID"
+    },
+    {
+      "name": "product_name",
+      "type": "VARCHAR(255)"
+    },
+    {
+      "name": "category_id",
+      "type": "UUID"
+    },
+    {
+      "name": "category_name",
+      "type": "VARCHAR(255)"
+    }
+  ],
+  "media_files": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "original_filename",
+      "type": "VARCHAR(500) NOT NULL"
+    },
+    {
+      "name": "mime_type",
+      "type": "VARCHAR(100) NOT NULL"
+    },
+    {
+      "name": "bucket",
+      "type": "VARCHAR(100) NOT NULL"
+    },
+    {
+      "name": "base_path",
+      "type": "VARCHAR(500) NOT NULL"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(50) NOT NULL"
+    },
+    {
+      "name": "uploaded_by",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "uploaded_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "notification_templates": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "code",
+      "type": "VARCHAR(200) NOT NULL"
+    },
+    {
+      "name": "channel",
+      "type": "VARCHAR(30) NOT NULL"
+    },
+    {
+      "name": "subject",
+      "type": "VARCHAR(500)"
+    },
+    {
+      "name": "body_template",
+      "type": "TEXT NOT NULL"
+    },
+    {
+      "name": "is_active",
+      "type": "BOOLEAN NOT NULL DEFAULT TRUE"
+    }
+  ],
+  "notification_logs": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "recipient_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "recipient_contact",
+      "type": "VARCHAR(500) NOT NULL"
+    },
+    {
+      "name": "channel",
+      "type": "VARCHAR(30) NOT NULL"
+    },
+    {
+      "name": "template_code",
+      "type": "VARCHAR(200) NOT NULL"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(30) NOT NULL"
+    },
+    {
+      "name": "sent_at",
+      "type": "TIMESTAMPTZ"
+    },
+    {
+      "name": "error_message",
+      "type": "TEXT"
+    }
+  ],
+  "shedlock": [
+    {
+      "name": "name",
+      "type": "VARCHAR(64) NOT NULL"
+    },
+    {
+      "name": "lock_until",
+      "type": "TIMESTAMP NOT NULL"
+    },
+    {
+      "name": "locked_at",
+      "type": "TIMESTAMP NOT NULL"
+    },
+    {
+      "name": "locked_by",
+      "type": "VARCHAR(255) NOT NULL"
+    }
+  ],
+  "recipes": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "product_id",
+      "type": "UUID NOT NULL UNIQUE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "recipe_items": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "recipe_id",
+      "type": "UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "ingredient_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMPTZ NOT NULL"
+    }
+  ],
+  "payments": [
+    {
+      "name": "id",
+      "type": "UUID PRIMARY KEY"
+    },
+    {
+      "name": "external_id",
+      "type": "VARCHAR(255)"
+    },
+    {
+      "name": "order_id",
+      "type": "UUID NOT NULL"
+    },
+    {
+      "name": "amount",
+      "type": "DECIMAL(10"
+    },
+    {
+      "name": "status",
+      "type": "VARCHAR(50) NOT NULL"
+    },
+    {
+      "name": "confirmation_url",
+      "type": "TEXT"
+    },
+    {
+      "name": "qr_code_data",
+      "type": "TEXT"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
+    }
+  ]
+}

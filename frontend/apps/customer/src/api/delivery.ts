@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { DeliverySlot } from './types'
+import type { DeliverySlot } from './types'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api', // Adjust base URL as needed
