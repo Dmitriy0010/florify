@@ -20,6 +20,11 @@ public class CustomerOrderCompletedConsumer {
     public void consume(OrderCompletedEvent event) {
         log.info("Consumed OrderCompletedEvent for order: {}", event.orderId());
 
+        if (event.customerId() == null) {
+            log.info("Order {} was a guest checkout (customerId is null), skipping point confirmation", event.orderId());
+            return;
+        }
+
         try {
             confirmPointsUseCase.execute(new ConfirmPointsCommand(
                 event.customerId(),

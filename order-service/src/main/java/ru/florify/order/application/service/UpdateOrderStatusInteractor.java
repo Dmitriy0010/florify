@@ -48,7 +48,15 @@ public class UpdateOrderStatusInteractor implements UpdateOrderStatusUseCase {
         }
 
         OrderStatus oldStatus = order.getStatus();
-        
+
+        // Business rule: PICKUP orders cannot be sent "out for delivery"
+        if (command.newStatus() == OrderStatus.OUT_FOR_DELIVERY
+                && order.getType() == ru.florify.order.domain.model.OrderType.PICKUP) {
+            throw new ru.florify.order.domain.exception.InvalidOrderStatusTransitionException(
+                "PICKUP orders cannot be set to OUT_FOR_DELIVERY. Use COMPLETED instead."
+            );
+        }
+
         // Apply status transition in domain (immutable update)
         if (command.newStatus() == OrderStatus.COMPLETED) {
             order = order.complete(command.floristId(), now);

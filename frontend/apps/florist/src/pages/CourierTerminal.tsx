@@ -186,9 +186,11 @@ function CourierTaskCard({ task, onAssign, onStatusUpdate, isWorking }: {
                 </span>
              </div>
              {order && (
-               <p style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontWeight: 600, marginTop: 4 }}>
-                  {order.items?.length || 0} тов. • {(order.finalAmount || 0).toLocaleString()} ₽
-               </p>
+                <p style={{ fontSize: 11, color: 'var(--color-text-tertiary)', fontWeight: 600, marginTop: 4 }}>
+                   {order.items?.length || 0} тов. • {(order.finalAmount || 0).toLocaleString()} ₽ • <span style={{ color: order.isPaid ? 'var(--color-success)' : 'var(--color-warning)' }}>
+                     {order.isPaid ? 'Оплачено' : 'При получении'}
+                   </span>
+                </p>
              )}
           </div>
           <div style={{ textAlign: 'right' }}>

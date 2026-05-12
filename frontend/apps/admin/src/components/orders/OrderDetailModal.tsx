@@ -22,6 +22,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { toast } from 'sonner'
 
 interface OrderDetailModalProps {
   orderId: string
@@ -38,9 +39,19 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
 
   const statusMutation = useMutation({
     mutationFn: (nextStatus: OrderStatus) => OrderService.updateStatus(orderId, nextStatus),
-    onSuccess: () => {
+    onSuccess: (_, nextStatus) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['order-detail', orderId] })
+      if (nextStatus === 'CANCELLED') {
+        toast.success('Заказ отменён')
+      } else {
+        toast.success('Статус заказа обновлён')
+      }
+    },
+    onError: (error: any) => {
+      const serverMessage = error?.response?.data?.message || error?.message || 'Неизвестная ошибка'
+      console.error('[OrderDetailModal] Status update failed:', error)
+      toast.error(`Ошибка обновления статуса: ${serverMessage}`)
     }
   })
 
@@ -62,7 +73,9 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
       case 'READY': return { label: 'ГОТОВО', color: 'text-amber-500 bg-amber-50', progress: 80, step: 4, statusText: 'Готов к выдаче', subText: 'Ожидает клиента или курьера' }
       case 'IN_PROGRESS': return { label: 'В РАБОТЕ', color: 'text-indigo-500 bg-indigo-50', progress: 60, step: 3, statusText: 'Сборка заказа', subText: 'Флорист подготавливает букет' }
       case 'CONFIRMED': return { label: 'ПОДТВЕРЖДЕНО', color: 'text-emerald-500 bg-emerald-50', progress: 40, step: 2, statusText: 'Заказ подтвержден', subText: 'Ожидает начала сборки' }
-      default: return { label: 'НОВОЕ', color: 'text-blue-500 bg-blue-50', progress: 20, step: 1, statusText: 'Заказ получен', subText: 'Ожидает подтверждения' }
+      case 'NEW': return { label: 'НОВОЕ', color: 'text-blue-500 bg-blue-50', progress: 20, step: 1, statusText: 'Заказ принят', subText: 'Склад подтвердил наличие' }
+      case 'PENDING_STOCK': return { label: 'ОЖИДАНИЕ', color: 'text-neutral-500 bg-neutral-100', progress: 10, step: 1, statusText: 'Проверка наличия', subText: 'Ожидает ответа от склада' }
+      default: return { label: 'ОЖИДАНИЕ', color: 'text-neutral-500 bg-neutral-100', progress: 10, step: 1, statusText: 'Заказ получен', subText: 'Ожидает проверки' }
     }
   }
 
@@ -130,23 +143,48 @@ export function OrderDetailModal({ orderId, onClose }: OrderDetailModalProps) {
                              {statusConfig.subText}
                           </p>
                           {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
-                             <button 
-                               onClick={() => {
-                                 const current = order.status || 'NEW'
-                                 const nextMap: Record<string, OrderStatus> = {
-                                   NEW: 'CONFIRMED',
-                                   CONFIRMED: 'IN_PROGRESS',
-                                   IN_PROGRESS: 'READY',
-                                   READY: (order.type === 'DELIVERY' ? 'OUT_FOR_DELIVERY' : 'COMPLETED') as OrderStatus,
-                                   OUT_FOR_DELIVERY: 'COMPLETED'
-                                 }
-                                 if (nextMap[current]) statusMutation.mutate(nextMap[current])
-                               }}
-                               disabled={statusMutation.isPending}
-                               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20"
-                             >
-                                Продвинуть на этап
-                             </button>
+                             <div className="flex gap-2">
+                                <button 
+                                  onClick={() => {
+                                    // Не используем window.confirm() — он блокируется браузером в некоторых окружениях
+                                    // Сразу мутируем, показываем toast с подтверждением
+                                    toast('Отменить заказ?', {
+                                      description: 'Это действие необратимо.',
+                                      action: {
+                                        label: 'Да, отменить',
+                                        onClick: () => statusMutation.mutate('CANCELLED'),
+                                      },
+                                      cancel: {
+                                        label: 'Нет',
+                                        onClick: () => {},
+                                      },
+                                      duration: 8000,
+                                    })
+                                  }}
+                                  disabled={statusMutation.isPending}
+                                  className="px-4 py-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
+                                >
+                                  {statusMutation.isPending ? '...' : 'Отменить'}
+                                </button>
+                               <button 
+                                 onClick={() => {
+                                   const current = order.status || 'NEW'
+                                   const nextMap: Record<string, OrderStatus> = {
+                                     PENDING_STOCK: 'NEW',
+                                     NEW: 'CONFIRMED',
+                                     CONFIRMED: 'IN_PROGRESS',
+                                     IN_PROGRESS: 'READY',
+                                     READY: (order.type === 'DELIVERY' ? 'OUT_FOR_DELIVERY' : 'COMPLETED') as OrderStatus,
+                                     OUT_FOR_DELIVERY: 'COMPLETED'
+                                   }
+                                   if (nextMap[current]) statusMutation.mutate(nextMap[current])
+                                 }}
+                                 disabled={statusMutation.isPending}
+                                 className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20"
+                               >
+                                  Продвинуть на этап
+                               </button>
+                             </div>
                           )}
                        </div>
                     </div>

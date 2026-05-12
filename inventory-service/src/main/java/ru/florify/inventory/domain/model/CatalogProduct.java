@@ -21,4 +21,5 @@ public class CatalogProduct {
     private final String unit;
     private final int defaultShelfLifeDays;
     private final boolean active;
+    private final String imageUrl;
 }

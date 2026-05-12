@@ -68,12 +68,14 @@ public class GetAllStockBalancesInteractor implements GetAllStockBalancesUseCase
                             b.getId(),
                             b.getProductId(),
                             p != null ? p.getName() : "Unknown Product",
-                            "General", 
-                            totalFromBatches, 
+                            p != null ? p.getSku() : null,
+                            p != null ? p.getImageUrl() : null,
+                            "General",
+                            totalFromBatches,
                             p != null ? p.getUnit() : "pcs",
                             b.getAverageCost(),
-                            10, // Must be int, not BigDecimal
-                            Instant.now(), 
+                            10,
+                            Instant.now(),
                             batchDtos
                     );
                 })

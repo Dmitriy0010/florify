@@ -15,56 +15,35 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { inventoryApi } from '../lib/inventoryApi';
-import { catalogApi } from '../lib/catalogApi';
 import { getMediaUrl } from '../lib/utils';
+import { useStoreStore } from '../store/useStoreStore';
 
-/* ── Flower image fallbacks ── */
-const FLOWER_IMG_MAP: Record<string, string> = {
-  'роза':      'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=200',
-  'тюльпан':   'https://images.unsplash.com/photo-1520323232427-81c328dc290f?auto=format&fit=crop&q=80&w=200',
-  'хризантем': 'https://images.unsplash.com/photo-1508784411316-02b8cdbe5941?auto=format&fit=crop&q=80&w=200',
-  'лилия':     'https://images.unsplash.com/photo-1508313880080-c4bef0730395?auto=format&fit=crop&q=80&w=200',
-  'букет':     'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&q=80&w=200',
-};
-const FALLBACK = 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&q=80&w=200';
 
-function resolveImg(url: string | null | undefined, name: string): string {
-  if (!url || url.includes('picsum') || url.includes('placeholder') || url.includes('loremflickr')) {
-    const lower = name.toLowerCase();
-    for (const [kw, img] of Object.entries(FLOWER_IMG_MAP)) {
-      if (lower.includes(kw)) return img;
-    }
-    return FALLBACK;
-  }
-  return url.startsWith('http') ? url : getMediaUrl(url);
-}
 
 export default function InventoryPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-
-  const { data: catalog = [] } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => catalogApi.getProducts({ size: 1000 }),
-  });
+  const { currentStoreId } = useStoreStore();
 
   const { data: stock = [], isLoading: stockLoading, refetch: refetchStock } = useQuery({
-    queryKey: ['inventory', 'all'],
-    queryFn: inventoryApi.getAllBalances,
+    queryKey: ['inventory', 'all', currentStoreId],
+    queryFn: () => inventoryApi.getAllBalances(currentStoreId),
     refetchInterval: 30_000,
     staleTime: 10_000,
   });
 
   const items = useMemo(() => {
-    let list = catalog.map(p => {
-      // stock entries may use productId OR id field depending on backend
-      const stockEntry = stock.find(
-        s => s.productId === p.id || (s as any).id === p.id
-      );
+    let list = stock.map(s => {
+      const name = s.name || s.productName || 'Без названия';
+      const rawImg = s.imageUrl;
+      const img = rawImg ? (rawImg.startsWith('http') ? rawImg : getMediaUrl(rawImg)) : null;
       return {
-        ...p,
-        _img: resolveImg(p.imageUrl, p.name),
-        _qty: stockEntry?.quantity ?? 0,
+        id: s.productId,
+        name,
+        sku: s.sku,
+        unit: s.unit || 'шт',
+        _img: img,
+        _qty: Number(s.quantity ?? 0),
       };
     });
 
@@ -76,7 +55,7 @@ export default function InventoryPage() {
       );
     }
     return list;
-  }, [catalog, stock, search]);
+  }, [stock, search]);
 
   const lowStockCount = items.filter(i => i._qty < 5).length;
 
@@ -97,7 +76,7 @@ export default function InventoryPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>Всего:</span>
-                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-text-primary)' }}>{catalog.length}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-text-primary)' }}>{stock.length}</span>
               </div>
               <div style={{ width: 1, height: 10, background: 'var(--color-border)' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -215,8 +194,12 @@ function InventoryRow({ item, onClick }: { item: any; onClick: () => void }) {
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       {/* Img */}
-      <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-sunken)' }}>
-        <img src={item._img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isOut ? 0.5 : 1 }} />
+      <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {item._img ? (
+          <img src={item._img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isOut ? 0.5 : 1 }} />
+        ) : (
+          <Package size={20} color="var(--color-text-tertiary)" strokeWidth={1.5} />
+        )}
       </div>
 
       {/* Name */}

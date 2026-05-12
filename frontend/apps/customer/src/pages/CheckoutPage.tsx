@@ -35,7 +35,7 @@ import { PaymentQRModal } from '@/components/checkout/PaymentQRModal'
 const checkoutSchema = z.object({
   firstName: z.string().min(2, 'Введите имя'),
   phone: z.string().min(10, 'Введите корректный номер телефона'),
-  address: z.string().min(5, 'Введите адрес доставки').optional(),
+  address: z.string().optional(),
   deliverySlotId: z.string().optional(),
   deliveryType: z.enum(['DELIVERY', 'PICKUP']),
   paymentMethod: z.enum(['CARD', 'CASH', 'ONLINE']),
@@ -56,6 +56,8 @@ export function CheckoutPage() {
     qrData: string
   } | null>(null)
   
+  const [isSuccess, setIsSuccess] = useState(false)
+
   const { data: stores } = useQuery({
     queryKey: ['stores'],
     queryFn: () => storesApi.getAll(),
@@ -113,6 +115,17 @@ export function CheckoutPage() {
       toast.error('Ваша корзина пуста')
       return
     }
+    
+    if (data.deliveryType === 'DELIVERY') {
+      if (!data.address || data.address.length < 5) {
+        toast.error('Укажите корректный адрес доставки (минимум 5 символов)')
+        return
+      }
+      if (!data.deliverySlotId) {
+        toast.error('Выберите время доставки')
+        return
+      }
+    }
 
     setIsLoading(true)
     try {
@@ -155,10 +168,12 @@ export function CheckoutPage() {
           // Do not clear cart or navigate yet. Wait for payment success.
         } catch (paymentErr) {
           toast.error('Не удалось сгенерировать QR-код для оплаты.')
+          setIsSuccess(true)
           navigate(`/order/${response.id}`)
           clearCart()
         }
       } else {
+        setIsSuccess(true)
         clearCart()
         toast.success('Заказ успешно оформлен!')
         navigate(`/order/${response.id}`)
@@ -172,15 +187,23 @@ export function CheckoutPage() {
     }
   }
 
+  const onInvalid = () => {
+    toast.error('Проверьте введенные данные', {
+      description: 'Некоторые обязательные поля (Имя, Телефон или Адрес) заполнены неверно',
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handlePaymentSuccess = () => {
     setShowPaymentQR(null)
+    setIsSuccess(true)
     clearCart()
     if (showPaymentQR) {
       navigate(`/order/${showPaymentQR.orderId}`)
     }
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && !isSuccess) {
     navigate('/cart')
     return null
   }
@@ -199,7 +222,7 @@ export function CheckoutPage() {
         <h1 className="text-4xl font-display font-bold tracking-tight">Оформление заказа</h1>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Checkout Form */}
         <div className="lg:col-span-8 space-y-12">
           

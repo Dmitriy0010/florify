@@ -20,11 +20,20 @@ public class InvoiceReceivedConsumer {
     private final ReceiveStockUseCase receiveStockUseCase;
 
     @KafkaListener(topics = "suppliers.invoice.received", groupId = "inventory-notification-group")
-    public void onInvoiceReceived(Map<String, Object> data) {
+    public void onInvoiceReceived(Object payload) {
         log.info("---- KAFKA EVENT RECEIVED IN INVENTORY ----");
-        log.info("Raw data: {}", data);
+        log.info("Raw payload class: {}", payload != null ? payload.getClass().getName() : "null");
         
         try {
+            Object actualPayload = payload;
+            if (payload instanceof org.apache.kafka.clients.consumer.ConsumerRecord<?, ?> record) {
+                actualPayload = record.value();
+            }
+            
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            Map<String, Object> data = mapper.convertValue(actualPayload, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            log.info("Raw data: {}", data);
             String invoiceId = String.valueOf(data.get("invoiceId"));
             String storeIdStr = String.valueOf(data.get("storeId"));
         

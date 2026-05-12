@@ -19,6 +19,8 @@ public class EnhancedStockBalanceResponse {
     private UUID id;
     private UUID productId;
     private String name;
+    private String sku;
+    private String imageUrl;
     private String category;
     private BigDecimal quantity;
     

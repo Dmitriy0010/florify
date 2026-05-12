@@ -7,8 +7,10 @@ import type {
 } from './types';
 
 export const inventoryApi = {
-  getAllBalances: async () => {
-    const { data } = await apiClient.get<EnhancedStockBalanceResponse[]>('/v1/inventory/balance/all');
+  getAllBalances: async (storeId?: string | null) => {
+    const { data } = await apiClient.get<EnhancedStockBalanceResponse[]>('/v1/inventory/balance/all', {
+      params: storeId ? { storeId } : {},
+    });
     return data;
   },
   getBalance: async (productId: string) => {
@@ -20,10 +22,10 @@ export const inventoryApi = {
     return data;
   },
   getTransactions: async (productId: string) => {
-    const { data } = await apiClient.get<{ data?: StockTransaction[] } | StockTransaction[]>(
-      `/v1/inventory/transactions/${productId}`,
-    );
-    return Array.isArray(data) ? data : (data.data ?? []);
+    const { data } = await apiClient.get<any>(`/v1/inventory/transactions/${productId}`);
+    // Backend returns PagedResult<StockTransaction> with .content field
+    if (Array.isArray(data)) return data;
+    return data?.content ?? data?.data ?? [];
   },
   writeOff: async (payload: WriteOffPayload) => {
     const { data } = await apiClient.post('/v1/inventory/write-off', payload);

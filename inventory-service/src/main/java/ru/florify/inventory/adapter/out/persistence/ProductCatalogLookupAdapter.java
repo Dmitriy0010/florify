@@ -36,6 +36,7 @@ public class ProductCatalogLookupAdapter implements ProductLookupPort {
                 .unit(e.getUnit())
                 .defaultShelfLifeDays(e.getDefaultShelfLifeDays())
                 .active(e.isActive())
+                .imageUrl(e.getImageUrl())
                 .build();
     }
 }

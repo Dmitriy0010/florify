@@ -19,6 +19,7 @@ public interface OrderEventMapper {
     @Mapping(target = "orderSource", constant = "WEB")
     @Mapping(target = "itemCount", constant = "0")
     @Mapping(target = "storeId", source = "storeId")
+    @Mapping(target = "status", constant = "COMPLETED")
     RecordOrderFactCommand toRecordCommand(OrderCompletedSpringEvent event);
     
     @Mapping(target = "completedAt", source = "occurredAt")

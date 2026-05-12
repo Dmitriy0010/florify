@@ -39,4 +39,7 @@ public class ProductCatalogJpaEntity {
 
     @Column(nullable = false)
     private boolean active;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 }

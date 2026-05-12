@@ -67,6 +67,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        log.warn("Access denied: {}", ex.getMessage());
         return ErrorResponse.of("FORBIDDEN", "Access denied: insufficient permissions");
     }
 
@@ -83,6 +84,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DomainException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleDomain(DomainException ex) {
+        log.warn("Domain exception [{}]: {}", ex.getErrorCode(), ex.getMessage());
         return ErrorResponse.of(ex.getErrorCode(), ex.getMessage());
     }
 

@@ -52,6 +52,7 @@ public class GlobalSecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/orders").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/orders/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/media/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/public/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")

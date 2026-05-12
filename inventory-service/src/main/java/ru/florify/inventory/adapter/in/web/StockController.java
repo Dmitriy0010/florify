@@ -130,4 +130,36 @@ public class StockController {
     public ResponseEntity<ru.florify.inventory.domain.model.StockTransaction> getTransaction(@PathVariable UUID transactionId) {
         return ResponseEntity.ok(getStockTransactionUseCase.execute(transactionId));
     }
+
+    /**
+     * Public endpoint — no auth required.
+     * Used by the customer storefront to check product availability in a selected store.
+     *
+     * GET /api/v1/inventory/public/availability?storeId=UUID&productIds=uuid1,uuid2,...
+     * Response: { "productId1": true, "productId2": false, ... }
+     * true  = in stock (quantity > 0)
+     * false = out of stock
+     */
+    @GetMapping("/public/availability")
+    @Operation(summary = "Public batch availability check",
+               description = "Returns in-stock status for a list of products in a given store. No authentication required.")
+    public ResponseEntity<java.util.Map<String, Boolean>> getPublicAvailability(
+            @RequestParam UUID storeId,
+            @RequestParam java.util.List<UUID> productIds
+    ) {
+        java.util.Map<String, Boolean> result = new java.util.LinkedHashMap<>();
+        for (UUID productId : productIds) {
+            try {
+                ru.florify.inventory.domain.model.StockBalance balance =
+                        getStockBalanceUseCase.execute(new ru.florify.inventory.application.port.in.StockBalanceQuery(productId, storeId));
+                result.put(productId.toString(), balance != null && balance.getQuantityInStock() != null
+                        && balance.getQuantityInStock().compareTo(java.math.BigDecimal.ZERO) > 0);
+            } catch (Exception e) {
+                // Product not found in this store — treat as out of stock
+                result.put(productId.toString(), false);
+            }
+        }
+        return ResponseEntity.ok(result);
+    }
 }
+

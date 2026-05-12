@@ -20,7 +20,7 @@ const HomePage = () => (
     </div>
   </div>
 )
-const ProductPage = () => <div>Product Page</div>
+import { ProductPage } from '@/pages/ProductPage'
 import { AccountLayout } from '@/layouts/AccountLayout'
 import { AccountOrdersPage } from '@/pages/AccountOrdersPage'
 import { AccountLoyaltyPage } from '@/pages/AccountLoyaltyPage'
@@ -30,6 +30,13 @@ import { AccountFavoritesPage } from '@/pages/AccountFavoritesPage'
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
+
+import { DeliveryPage } from '@/pages/DeliveryPage'
+import { ContactsPage } from '@/pages/ContactsPage'
+import { AboutPage } from '@/pages/AboutPage'
+import { FAQPage } from '@/pages/FAQPage'
+import { PrivacyPage } from '@/pages/PrivacyPage'
+import { TermsPage } from '@/pages/TermsPage'
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +52,12 @@ export const router = createBrowserRouter([
       { path: 'order/:id', element: <OrderTrackingPage /> },
       { path: 'auth/login', element: <LoginPage /> },
       { path: 'auth/register', element: <RegisterPage /> },
+      { path: 'delivery', element: <DeliveryPage /> },
+      { path: 'contacts', element: <ContactsPage /> },
+      { path: 'about', element: <AboutPage /> },
+      { path: 'faq', element: <FAQPage /> },
+      { path: 'privacy', element: <PrivacyPage /> },
+      { path: 'terms', element: <TermsPage /> },
       {
         path: 'account',
         element: (

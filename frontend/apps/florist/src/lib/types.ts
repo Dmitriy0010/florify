@@ -36,6 +36,8 @@ export interface OrderKanbanItem {
   totalAmount?: number;
   finalAmount?: number;
   createdAt?: string;
+  isPaid?: boolean;
+  paymentMethod?: string;
   items?: Array<{
     productId?: string;
     productName?: string;
@@ -52,8 +54,12 @@ export interface OrderDetail extends OrderKanbanItem {
 }
 
 export interface EnhancedStockBalanceResponse {
+  id?: string;
   productId: string;
-  productName: string;
+  productName?: string;
+  name?: string;
+  sku?: string;
+  imageUrl?: string;
   quantity: number;
   averageCost: number;
   unit?: string;

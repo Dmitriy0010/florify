@@ -41,7 +41,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/loyalty" className="text-[var(--color-text-secondary)] hover:text-[var(--color-brand)] transition-colors">
+                <Link to="/account/loyalty" className="text-[var(--color-text-secondary)] hover:text-[var(--color-brand)] transition-colors">
                   Программа лояльности
                 </Link>
               </li>

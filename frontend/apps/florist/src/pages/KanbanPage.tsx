@@ -105,11 +105,12 @@ function KanbanView() {
     confirmed:   useQuery({ 
       queryKey: ['kanban', 'NEW_AND_CONFIRMED'],        
       queryFn: async () => {
-        const [newOrders, confirmedOrders] = await Promise.all([
+        const [pendingOrders, newOrders, confirmedOrders] = await Promise.all([
+          ordersApi.getKanban('PENDING_STOCK' as OrderStatus, 50),
           ordersApi.getKanban('NEW' as OrderStatus, 50),
           ordersApi.getKanban('CONFIRMED' as OrderStatus, 50)
         ]);
-        return [...newOrders, ...confirmedOrders].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        return [...pendingOrders, ...newOrders, ...confirmedOrders].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       }, 
       ...OPTS 
     }),
@@ -272,6 +273,7 @@ function KanbanView() {
    ───────────────────────── */
 function CalendarView({ allOrders, isLoading }: { allOrders: any[]; isLoading: boolean }) {
   const qc = useQueryClient();
+  const myId = useAuthStore((s) => s.userId);
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
     const d = new Date().getDay();
@@ -289,7 +291,7 @@ function CalendarView({ allOrders, isLoading }: { allOrders: any[]; isLoading: b
   const getForDayStatus = (day: Date, status: string) =>
     allOrders.filter(o => {
       if (status === 'CONFIRMED') {
-        if (o.status !== 'NEW' && o.status !== 'CONFIRMED' && o.status !== 'IN_PROGRESS') return false;
+        if (o.status !== 'PENDING_STOCK' && o.status !== 'NEW' && o.status !== 'CONFIRMED' && o.status !== 'IN_PROGRESS') return false;
       } else if (o.status !== status) return false;
       return isSameDay(new Date(o.createdAt || Date.now()), day);
     });
@@ -362,14 +364,35 @@ function CalendarView({ allOrders, isLoading }: { allOrders: any[]; isLoading: b
       </div>
 
       {/* Kanban columns for selected day */}
-      <DragDropContext onDragEnd={(result) => {
-        const { destination, draggableId } = result;
+      <DragDropContext onDragEnd={async (result) => {
+        const { destination, source, draggableId } = result;
         if (!destination) return;
+        if (destination.droppableId === source.droppableId) return;
         const destCol = COLUMNS.find(c => c.id === destination.droppableId);
         if (!destCol) return;
-        
-        ordersApi.updateStatus(draggableId, destCol.id as OrderStatus)
-          .then(() => qc.invalidateQueries({ queryKey: ['orders', 'all'] }));
+
+        const targetStatus = destCol.id as OrderStatus;
+        const floristId = (targetStatus === 'IN_PROGRESS') ? (myId ?? undefined) : undefined;
+
+        // ── Optimistic update: move card immediately in cache ──
+        const prevData = qc.getQueryData<any[]>(['orders', 'all']);
+        qc.setQueryData(['orders', 'all'], (old: any[] | undefined) =>
+          (old ?? []).map(o =>
+            o.id === draggableId ? { ...o, status: targetStatus } : o
+          )
+        );
+
+        try {
+          await ordersApi.updateStatus(draggableId, targetStatus, floristId);
+          // Refetch to get authoritative data
+          qc.invalidateQueries({ queryKey: ['orders', 'all'] });
+          qc.invalidateQueries({ queryKey: ['kanban'] });
+        } catch (err: any) {
+          // Rollback on failure
+          qc.setQueryData(['orders', 'all'], prevData);
+          const msg = err?.response?.data?.message || err?.message || 'Ошибка смены статуса';
+          console.error('[CalendarDrag] status update failed, rolled back:', msg);
+        }
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, flex: 1, minHeight: 0 }}>
           {COLUMNS.map(col => {
@@ -454,12 +477,13 @@ export default function KanbanPage() {
   const { data: allOrdersData = [], isLoading } = useQuery({
     queryKey: ['orders', 'all'],
     queryFn: async () => {
-      const statuses: OrderStatus[] = ['NEW', 'CONFIRMED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED'];
+      const statuses: OrderStatus[] = ['PENDING_STOCK', 'NEW', 'CONFIRMED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED'];
       const results = await Promise.all(statuses.map(s => ordersApi.getKanban(s, 100)));
       return results.flat();
     },
     enabled: view === 'calendar',
-    ...OPTS,
+    refetchInterval: 30_000,
+    staleTime: 0,
   });
 
   const allOrders = Array.isArray(allOrdersData) ? allOrdersData : [];
