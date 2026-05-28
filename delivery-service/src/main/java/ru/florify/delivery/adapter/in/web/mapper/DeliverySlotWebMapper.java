@@ -19,6 +19,7 @@ public interface DeliverySlotWebMapper {
     @Mapping(target = "slotId", source = "id")
     UpdateDeliverySlotCommand toCommand(UpdateDeliverySlotRequest request, UUID id, UUID performerId);
 
-    @Mapping(target = "isFull", expression = "java(slot.isFull())")
+    @Mapping(target = "remainingCapacity", expression = "java(slot.getMaxCapacity() - slot.getCurrentLoad())")
+    @Mapping(target = "active", expression = "java(!slot.isFull())")
     DeliverySlotResponse toResponse(DeliverySlot slot);
 }

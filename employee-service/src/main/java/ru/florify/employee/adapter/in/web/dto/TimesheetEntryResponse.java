@@ -11,6 +11,8 @@ public record TimesheetEntryResponse(
         LocalDate date,
         Instant checkinAt,
         Instant checkoutAt,
+        Instant scheduledStartAt,
+        Instant scheduledEndAt,
         BigDecimal hoursWorked
 ) {
 }

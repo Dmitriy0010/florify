@@ -1,0 +1,394 @@
+# 🌸 Florify — Полный анализ проекта для защиты
+
+## 1. Что это за система?
+
+**Florify** — комплексная ERP-платформа для управления цветочным бизнесом, построенная на **модульном монолите** с элементами **микросервисной архитектуры** (Hexagonal / Ports & Adapters). Система охватывает **полный цикл бизнеса**: от витрины покупателя до финансовой аналитики владельца.
+
+### Технологический стек
+
+| Слой | Технологии |
+|------|-----------|
+| **Backend** | Java 21+ (Virtual Threads), Spring Boot 3, Spring Security, Spring Data JPA |
+| **База данных** | PostgreSQL 17 + Flyway миграции |
+| **Кеширование** | Redis 7.4 |
+| **Сообщения** | Apache Kafka (Confluent 7.6, KRaft mode — без ZooKeeper) |
+| **Хранилище файлов** | MinIO (S3-совместимое) |
+| **Frontend** | React + TypeScript, pnpm monorepo (3 приложения: customer, admin, florist) |
+| **Авторизация** | JWT + BCrypt + Redis Token Blacklist |
+| **Платежи** | ЮKassa + СБП (QR-код) |
+| **Уведомления** | Email (SMTP/Mailtrap) + Telegram Bot API |
+| **Контейнеризация** | Docker Compose |
+
+---
+
+## 2. В чём фишка? Чем отличается от конкурентов?
+
+### 2.1 Полное покрытие бизнес-процессов в одной системе
+
+> Существующие решения (1С:Флористика, iiko, Poster) решают **одну** задачу: либо учёт, либо CRM, либо витрину. Florify объединяет **ВСЁ** в единой платформе.
+
+**13 доменных модулей** в одном проекте:
+
+| # | Модуль | Назначение |
+|---|--------|-----------|
+| 1 | `auth-service` | Аутентификация, JWT, RBAC (7 ролей) |
+| 2 | `customer-service` | Клиенты, программа лояльности с тирами |
+| 3 | `product-catalog-service` | Каталог товаров, категории |
+| 4 | `order-service` | Заказы, конечный автомат статусов, оплата |
+| 5 | `inventory-service` | Складской учёт, партии (FEFO), средневзвешенная себестоимость (WAC) |
+| 6 | `supplier-service` | Поставщики, приходные накладные |
+| 7 | `employee-service` | Сотрудники, табель, зарплатные ведомости |
+| 8 | `delivery-service` | Доставка, зоны, слоты, курьерский терминал |
+| 9 | `finance-service` | Главная книга, P&L отчёт |
+| 10 | `analytics-service` | Дашборды, отчёты по продажам |
+| 11 | `notification-service` | Мультиканальные уведомления |
+| 12 | `media-service` | Загрузка и хранение медиафайлов (MinIO) |
+| 13 | `store-service` | Точки продаж, мультимагазинность |
+
+### 2.2 Три отдельных фронтенд-приложения
+
+| Приложение | Для кого | Ключевые страницы |
+|-----------|----------|-------------------|
+| **customer** (витрина) | Покупатель | Каталог, корзина, checkout, отслеживание заказа, личный кабинет, лояльность |
+| **admin** (панель) | Владелец/Админ | Дашборд, аналитика, товары, сотрудники, финансы, поставщики, склад, POS |
+| **florist** (PWA) | Флорист/Курьер | Kanban-доска заказов, POS-терминал, инвентаризация, курьерский терминал |
+
+### 2.3 Ключевые конкурентные преимущества
+
+1. **Domain-Driven Design (DDD)** — Rich Domain Objects с бизнес-логикой внутри сущностей (не анемичная модель)
+2. **Event-Driven Architecture через Kafka** — все модули общаются через события, а не прямые вызовы
+3. **Hexagonal Architecture (Ports & Adapters)** — каждый сервис имеет чёткое разделение на `adapter/`, `application/`, `domain/`
+4. **CQRS-элементы** — разделение на `command/` и `query/` в application-слое
+5. **Складской учёт с WAC** — пересчёт средневзвешенной себестоимости при каждом поступлении
+6. **Программа лояльности с тирами** — автоматическое повышение уровня клиента
+7. **Полноценный P&L-отчёт** — автоматическая генерация отчёта о прибылях и убытках
+8. **Мультиканальные уведомления** — шаблонизированная система (Email + Telegram)
+
+---
+
+## 3. Redis — где используется и как работает кеширование?
+
+> **Да, Redis активно используется.** Версия: `redis:7.4.2-alpine`, запускается в Docker Compose.
+
+### 3.1 Где подключён Redis
+
+Redis подключён как зависимость (`spring-boot-starter-data-redis`) в **6 сервисах**:
+- `product-catalog-service`
+- `customer-service`  
+- `analytics-service`
+- `order-service`
+- `inventory-service`
+- `supplier-service`
+
+### 3.2 Как работает кеширование — архитектурный подход
+
+Кеширование реализовано **НЕ через аннотации** `@Cacheable/@CacheEvict`, а через **выделенные адаптеры** в рамках Hexagonal Architecture:
+
+```
+domain/              ← Чистая бизнес-логика, не знает о Redis
+application/
+  port/out/
+    ProductCachePort.java    ← Интерфейс (порт)
+adapter/out/cache/
+  RedisProductCacheAdapter.java  ← Реализация через RedisTemplate
+```
+
+> **Ответ для преподавателя:** «Мы не используем Spring @Cacheable, потому что это нарушает принцип Dependency Inversion и Hexagonal Architecture. Вместо этого кеширование абстрагировано через порт (интерфейс) в application-слое, а конкретная реализация через Redis инжектится как адаптер. Если завтра мы решим заменить Redis на Hazelcast — изменится только один класс-адаптер, бизнес-логика не трогается.»
+
+### 3.3 Какие данные кешируются
+
+| Сервис | Ключ Redis | Данные | TTL | Назначение |
+|--------|-----------|--------|-----|-----------|
+| **product-catalog** | `catalog:product:{uuid}` | Объект `Product` | **1 час** | Снижение нагрузки на БД при частых запросах каталога |
+| **customer** | `customer:{uuid}` | Объект `Customer` | **60 мин** (настраиваемый) | Быстрый доступ к профилю клиента |
+| **analytics** | `analytics:dashboard` | Объект `DashboardResult` | Настраиваемый | Тяжёлые агрегатные запросы кешируются |
+| **analytics** | `analytics:sales:{key}` | Объект `SalesReportResult` | Настраиваемый | Отчёты по продажам |
+| **auth (blacklist)** | `auth:blacklist:{sha256}` | "1" | TTL = оставшееся время жизни токена | Блокировка отозванных JWT при логауте |
+
+### 3.4 Redis для безопасности — Token Blacklist
+
+Особое применение Redis — **черный список JWT-токенов** при логауте:
+
+```java
+// При логауте токен блокируется в Redis
+public void blacklist(String rawAccessToken, Duration ttl) {
+    String key = getBlacklistKey(rawAccessToken);  // SHA-256 хеш
+    redisTemplate.opsForValue().set(key, "1", ttl);
+}
+
+// При каждом запросе проверяется
+public boolean isBlacklisted(String rawAccessToken) {
+    String key = getBlacklistKey(rawAccessToken);
+    return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+}
+```
+
+> **Ответ:** «Токен хешируется SHA-256 перед сохранением в Redis — это обеспечивает безопасность: даже если кто-то получит доступ к Redis, он не сможет восстановить реальные JWT-токены. TTL ключа равен оставшемуся времени жизни токена — так Redis не засоряется.»
+
+### 3.5 Стратегия инвалидации кеша
+
+Паттерн **Cache-Aside** с явной инвалидацией:
+- **Чтение**: сначала Redis → если промах → БД → записать в Redis
+- **Запись/Обновление**: обновить БД → вызвать `evict()` на соответствующем порте
+- **Аналитика**: `evictAllAnalyticsCache()` — удаляет все ключи по маске `analytics:*`
+
+### 3.6 Конфигурация Redis
+
+Центральная конфигурация в `common` модуле ([GlobalRedisConfig.java](file:///c:/Users/admin/IdeaProjects/florify/common/src/main/java/ru/florify/common/config/GlobalRedisConfig.java)):
+- Сериализация ключей: `StringRedisSerializer`
+- Сериализация значений: `GenericJackson2JsonRedisSerializer` (JSON через Jackson)
+- Единый `RedisTemplate<String, Object>` для всех сервисов
+
+---
+
+## 4. Платёжная система
+
+### 4.1 Интеграция с ЮKassa + СБП
+
+Платёжная система реализована через порт `PaymentGateway` и адаптер `YooKassaPaymentAdapter`:
+
+- **PaymentGateway** — абстрактный порт (интерфейс)
+- **YooKassaPaymentAdapter** — конкретная реализация для ЮKassa
+- Поддержка **СБП (Система быстрых платежей)** — генерация QR-кода через `qr.nspk.ru`
+- Webhook endpoint `/api/v1/payments/webhooks/yookassa` для получения уведомлений об оплате
+
+### 4.2 Жизненный цикл платежа
+
+```
+PENDING → SUCCEEDED (через webhook от ЮKassa)
+PENDING → CANCELED  (таймаут или отмена)
+```
+
+Домен `Payment` содержит:
+- `externalId` — ID транзакции в ЮKassa
+- `confirmationUrl` — ссылка для перехода к оплате
+- `qrCodeData` — данные для генерации QR-кода СБП
+- `status` — PENDING / SUCCEEDED / CANCELED
+
+### 4.3 Поддерживаемые способы оплаты
+
+```java
+public enum PaymentMethod {
+    CASH,    // Наличные (при получении / POS)
+    CARD,    // Банковская карта
+    ONLINE,  // Онлайн (ЮKassa)
+    SBP      // СБП (QR-код)
+}
+```
+
+> **Ответ:** «Платёжка реализована по принципу Port & Adapter. Есть абстрактный порт `PaymentGateway`, и конкретная реализация через ЮKassa. Если завтра нужно подключить Stripe — достаточно написать новый адаптер. СБП поддерживается через генерацию QR-кода по стандарту НСПК. Webhook-эндпоинт принимает уведомления от платёжной системы и обновляет статус через `ConfirmPaymentInteractor`.»
+
+---
+
+## 5. Крутые фичи подробно
+
+### 5.1 Kanban-доска флориста
+
+Заказы отображаются как карточки на доске с колонками по статусам. Флорист перетаскивает карточки для изменения статуса. Реализован **полноценный конечный автомат (FSM)** в домене:
+
+```
+PENDING_STOCK → NEW → CONFIRMED → IN_PROGRESS → READY → OUT_FOR_DELIVERY → COMPLETED
+                                                                            ↗
+Любой не-финальный статус ──────────────────────────────────────→ CANCELLED
+```
+
+Каждый переход **валидируется на уровне домена** — нельзя перевести заказ из COMPLETED обратно.
+
+### 5.2 Складской учёт с WAC и партиями
+
+**Weighted Average Cost (средневзвешенная себестоимость)** — пересчитывается при каждом поступлении:
+
+```java
+// StockBalance.receive() — пересчёт WAC
+BigDecimal newAverageCost = (currentQty × currentWAC + newQty × newPrice) / (currentQty + newQty);
+```
+
+Партионный учёт (`StockBatch`) с:
+- Контролем сроков годности (`expiresAt`)
+- Статусами: AVAILABLE → DEPLETED / EXPIRED
+- Автоматическим оповещением о низком остатке через Kafka → notification-service
+
+### 5.3 Программа лояльности
+
+Многоуровневая система с Rich Domain Object:
+- **Резервирование баллов** при создании заказа (`reserve`)
+- **Подтверждение** при завершении заказа (`confirm`) — списание + начисление
+- **Возврат** при отмене заказа (`release`)
+- **Автоматический апгрейд тира** на основе суммы покупок (`upgradeTierIfNeeded`)
+
+### 5.4 P&L отчёт (Profit & Loss)
+
+Финансовая аналитика на уровне Главной книги:
+
+```java
+public enum FinancialType {
+    REVENUE_SALE,       // Выручка
+    COGS,               // Себестоимость
+    PURCHASE_EXPENSE,   // Закупки
+    SALARY_EXPENSE,     // Зарплаты
+    WRITE_OFF_EXPENSE,  // Списания
+    RENT_EXPENSE,       // Аренда
+    UTILITY_EXPENSE,    // Коммуналка
+    MARKETING_EXPENSE,  // Маркетинг
+    INVENTORY_GAIN,     // Излишки
+    INVENTORY_LOSS      // Недостачи
+}
+```
+
+Автоматический отчёт: Выручка → Валовая прибыль → Операционные расходы → Чистая прибыль.
+
+### 5.5 Мультиканальные уведомления
+
+Шаблонизированная система с двумя каналами:
+- **Email** (SMTP) — для клиентов (подтверждение заказа)
+- **Telegram Bot** — для персонала (смена статуса заказа, низкий остаток)
+
+Шаблоны хранятся в БД, поддерживают плейсхолдеры.
+
+### 5.6 POS-терминал
+
+Встроенная касса для оффлайн-продаж (source = `POS`), заказ сразу переходит в `CONFIRMED`, минуя резервирование склада.
+
+### 5.7 Курьерский терминал
+
+Отдельный FSM для доставки: `CREATED → ASSIGNED → PICKED_UP → DELIVERED / FAILED` с геокоординатами и ETA.
+
+---
+
+## 6. Event-Driven Architecture (Kafka)
+
+### 6.1 Продюсеры (кто публикует события)
+
+| Сервис | Топик | Событие |
+|--------|-------|---------|
+| auth-service | `auth.user.registered` | Регистрация пользователя |
+| order-service | `orders.order.created` | Создание заказа |
+| order-service | `orders.order.confirmed` | Подтверждение заказа |
+| order-service | `orders.order.status_changed` | Смена статуса |
+| order-service | `orders.order.completed` | Завершение заказа |
+| order-service | `orders.order.cancelled` | Отмена заказа |
+| inventory-service | `inventory.stock.reserved` | Резерв товара |
+| inventory-service | `inventory.stock.rejected` | Отказ резерва (нет на складе) |
+| inventory-service | `stock.low` | Низкий остаток |
+| inventory-service | `stock.expiry-alert` | Истекает срок годности |
+| supplier-service | `suppliers.invoice.submitted` | Отправка накладной |
+| supplier-service | `suppliers.invoice.received` | Приёмка товара |
+| employee-service | `salary.approved` | Утверждение зарплаты |
+| product-catalog | каталожные события | Изменения товаров |
+
+### 6.2 Консьюмеры (кто слушает)
+
+| Консьюмер | Слушает | Действие |
+|-----------|---------|----------|
+| **notification** → OrderEventsConsumer | `orders.order.status_changed`, `orders.order.created` | Отправка Email/Telegram |
+| **notification** → StockEventsConsumer | `stock.low`, `stock.expiry-alert` | Алерт о складе |
+| **notification** → EmployeeEventsConsumer | `salary.approved` | Уведомление о зарплате |
+| **notification** → SupplierEventsConsumer | `suppliers.invoice.submitted` | Уведомление о накладной |
+| **inventory** → OrderConfirmedConsumer | `orders.order.confirmed` | Списание со склада |
+| **inventory** → InvoiceReceivedConsumer | `suppliers.invoice.received` | Оприходование товара |
+| **order** → InventoryReservedConsumer | `inventory.stock.reserved` | Подтверждение резерва |
+| **order** → InventoryRejectedConsumer | `inventory.stock.rejected` | Отмена из-за нехватки |
+| **employee** → UserRegisteredConsumer | `auth.user.registered` | Создание профиля сотрудника |
+| **customer** → UserRegisteredConsumer | `auth.user.registered` | Создание профиля клиента |
+| **customer** → OrderCompletedConsumer | `orders.order.completed` | Начисление баллов |
+| **customer** → OrderCancelledConsumer | `orders.order.cancelled` | Возврат баллов |
+
+> **Ответ:** «Kafka используется как шина событий между модулями. Продюсер публикует событие в топик, не зная кто его прочитает. Это обеспечивает слабую связанность (loose coupling). Kafka настроен в KRaft-режиме (без ZooKeeper), с idempotent-продюсером (`enable.idempotence: true`), `acks=all`, и DLT (Dead Letter Topic) для обработки ошибок.»
+
+---
+
+## 7. Архитектурные преимущества
+
+### 7.1 Hexagonal Architecture (Ports & Adapters)
+
+Каждый сервис имеет **три слоя**:
+
+```
+domain/          ← Чистая бизнес-логика (нет зависимостей от фреймворков)
+  model/         ← Rich Domain Objects
+  event/         ← Доменные события
+  exception/     ← Доменные исключения
+
+application/     ← Use Cases (Interactors)
+  port/in/       ← Входные порты (интерфейсы для контроллеров)
+  port/out/      ← Выходные порты (интерфейсы для БД, кеша, Kafka)
+  service/       ← Реализации use cases
+  command/       ← CQRS команды
+  query/         ← CQRS запросы
+
+adapter/         ← Инфраструктура
+  in/web/        ← REST контроллеры
+  in/messaging/  ← Kafka консьюмеры
+  out/persistence/ ← JPA репозитории
+  out/cache/     ← Redis адаптеры
+  out/kafka/     ← Kafka продюсеры
+  out/payment/   ← Платёжные адаптеры
+```
+
+### 7.2 RBAC (Role-Based Access Control)
+
+7 ролей с гранулярным доступом:
+
+| Роль | Доступ |
+|------|--------|
+| OWNER | Полный доступ |
+| ADMIN | Управление магазином, каталогом, персоналом |
+| FLORIST | Kanban заказов, POS, инвентаризация |
+| CASHIER | Только POS-терминал |
+| COURIER | Только свои задачи доставки |
+| SUPPLIER_MANAGER | Поставщики, накладные |
+| CUSTOMER | Личный кабинет, заказы, лояльность |
+
+### 7.3 Тестирование
+
+**37+ тестовых файлов** покрывают:
+- Unit-тесты доменных моделей (Order, StockBalance, LoyaltyAccount, DeliveryTask)
+- Unit-тесты use cases / interactors
+- Интеграционные тесты с Testcontainers (PostgreSQL + Redis)
+
+### 7.4 Миграции БД
+
+**Flyway** с 13+ миграционных файлов, покрывающих все таблицы. Поддержка `out-of-order` для параллельной разработки.
+
+### 7.5 Virtual Threads (Java 21)
+
+```yaml
+spring:
+  threads:
+    virtual:
+      enabled: true
+```
+
+> **Ответ:** «Виртуальные потоки Java 21 позволяют обрабатывать тысячи одновременных запросов без увеличения пула потоков ОС. Это особенно важно при блокирующих операциях ввода-вывода (Redis, PostgreSQL, Kafka).»
+
+---
+
+## 8. Готовые ответы на типичные вопросы преподавателей
+
+### «Почему модульный монолит, а не микросервисы?»
+
+> «Модульный монолит с Hexagonal Architecture даёт все преимущества микросервисов (изоляция доменов, независимая разработка) без накладных расходов на сетевое взаимодействие, distributed transactions и сложность деплоя. Каждый модуль можно вынести в отдельный микросервис без изменения бизнес-логики — достаточно заменить адаптеры. Kafka уже обеспечивает асинхронную связь.»
+
+### «Как обеспечивается консистентность данных?»
+
+> «Используется паттерн Eventual Consistency через Saga-подобный процесс: заказ создаётся со статусом PENDING_STOCK → inventory-service пытается зарезервировать товар → публикует stock.reserved или stock.rejected → order-service реагирует. Idempotent-продюсер Kafka гарантирует exactly-once semantics.»
+
+### «Что с безопасностью?»
+
+> «Stateless JWT-аутентификация с BCrypt для паролей. Access-токен живёт 8 часов, refresh — 30 дней. При логауте токен блокируется в Redis (SHA-256 хеш). Method-level security через @PreAuthorize. CORS настроен. Webhook-эндпоинты доступны без аутентификации (по сигнатуре ЮKassa).»
+
+### «Почему Redis, а не встроенный кеш (ConcurrentHashMap)?»
+
+> «Redis обеспечивает: (1) персистентность кеша при перезапуске приложения, (2) TTL с автоматическим удалением, (3) атомарные операции, (4) единый кеш для горизонтально масштабированных инстансов. Если завтра запустить 3 инстанса — кеш будет общий.»
+
+### «Как масштабируется система?»
+
+> «Горизонтально: Redis — общий кеш, Kafka — consumer groups (параллельная обработка), PostgreSQL — read replicas. Вертикально: Virtual Threads устраняют бутылочное горлышко thread pool. Каждый модуль можно вынести в отдельный сервис.»
+
+### «Что будет если Redis упадёт?»
+
+> «Система продолжит работать — все Redis-адаптеры обёрнуты в try-catch (см. RedisCustomerCacheAdapter). При ошибке Redis запрос пойдёт напрямую в БД. Логируется warning. Это graceful degradation.»
+
+### «Зачем Kafka, если это монолит?»
+
+> «Kafka обеспечивает: (1) слабую связанность — notification-service не зависит от order-service, (2) гарантию доставки — события не теряются при падении, (3) replay — можно перечитать события, (4) готовность к микросервисной декомпозиции — ничего не нужно менять.»

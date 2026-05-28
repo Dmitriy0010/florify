@@ -7,6 +7,7 @@ import ru.florify.common.exception.ConflictException;
 import ru.florify.common.exception.NotFoundException;
 import ru.florify.employee.application.command.CheckinCommand;
 import ru.florify.employee.application.command.CheckoutCommand;
+import ru.florify.employee.application.command.ScheduleCommand;
 import ru.florify.employee.application.port.in.TimesheetUseCase;
 import ru.florify.employee.application.port.out.EmployeeRepository;
 import ru.florify.employee.application.port.out.TimesheetRepository;
@@ -59,6 +60,23 @@ public class TimesheetInteractor implements TimesheetUseCase {
         }
         Instant now = clock.instant();
         return timesheetRepository.save(current.checkout(now));
+    }
+
+    @Override
+    @Transactional
+    public TimesheetEntry schedule(ScheduleCommand command) {
+        assertEmployee(command.employeeId());
+        TimesheetEntry entry = timesheetRepository.findByEmployeeAndDate(command.employeeId(), command.date())
+                .orElseGet(() -> TimesheetEntry.builder()
+                        .id(UUID.randomUUID())
+                        .employeeId(command.employeeId())
+                        .date(command.date())
+                        .build());
+        
+        entry.setScheduledStartAt(command.scheduledStartAt());
+        entry.setScheduledEndAt(command.scheduledEndAt());
+        
+        return timesheetRepository.save(entry);
     }
 
     @Override

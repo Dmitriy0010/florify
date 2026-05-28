@@ -1,5 +1,11 @@
 server:
   port: 8080
+  tomcat:
+    threads:
+      max: 50        # Default 200 — слишком много для 8GB машины
+      min-spare: 5
+    max-connections: 200
+    accept-count: 50
 
 spring:
   application:
@@ -9,14 +15,18 @@ spring:
     username: ${DB_USER:florify_user}
     password: ${DB_PASSWORD:florify_password}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10   # Ограничиваем пул DB соединений
+      minimum-idle: 3
+      idle-timeout: 30000
+      connection-timeout: 20000
   jpa:
     hibernate:
       ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
-        # We use public schema for all modules
-        format_sql: true
+        format_sql: false     # Отключаем форматирование SQL в логах
     show-sql: false
   flyway:
     enabled: true
@@ -81,7 +91,13 @@ app:
 
 logging:
   level:
-    ru.florify: DEBUG
+    root: WARN
+    ru.florify: INFO                          # Было DEBUG — генерировало сотни строк на запрос
+    ru.florify.common.security: WARN          # JWT-логи были основным мусором
+    org.springframework.web: WARN
+    org.hibernate: WARN
+    org.apache.kafka: WARN
+    com.zaxxer.hikari: WARN
 
 management:
   endpoints:

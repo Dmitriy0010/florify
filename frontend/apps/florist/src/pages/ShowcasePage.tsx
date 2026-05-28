@@ -15,6 +15,7 @@ import {
 import { catalogApi } from '../lib/catalogApi';
 import { inventoryApi } from '../lib/inventoryApi';
 import { getMediaUrl } from '../lib/utils';
+import { useStoreStore } from '../store/useStoreStore';
 
 /* ── Flower image fallbacks by keyword ─────────── */
 const FLOWER_IMAGES: Record<string, string> = {
@@ -51,6 +52,7 @@ function resolveImg(imageUrl: string | null | undefined, name: string): string {
 
 export default function ShowcasePage() {
   const qc = useQueryClient();
+  const { currentStoreId } = useStoreStore();
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
 
@@ -60,8 +62,8 @@ export default function ShowcasePage() {
   });
 
   const { data: stockLevels = [] } = useQuery({
-    queryKey: ['inventory', 'all'],
-    queryFn: () => inventoryApi.getAllBalances(),
+    queryKey: ['inventory', 'all', currentStoreId],
+    queryFn: () => inventoryApi.getAllBalances(currentStoreId),
   });
 
   const items = useMemo(() => {

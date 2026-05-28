@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,17 +14,19 @@ import {
 import { inventoryApi } from '../lib/inventoryApi';
 import { catalogApi } from '../lib/catalogApi';
 import { cn } from '../lib/utils';
+import { useStoreStore } from '../store/useStoreStore';
 
 export default function InventoryAuditPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentStoreId } = useStoreStore();
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [search, setSearch] = useState('');
   const [saveProgress, setSaveProgress] = useState<{ done: number; total: number } | null>(null);
 
   const { data: stock = [], isLoading: stockLoading } = useQuery({
-    queryKey: ['inventory', 'all'],
-    queryFn: inventoryApi.getAllBalances,
+    queryKey: ['inventory', 'all', currentStoreId],
+    queryFn: () => inventoryApi.getAllBalances(currentStoreId),
   });
 
   const { data: products = [] } = useQuery({

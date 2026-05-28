@@ -31,6 +31,7 @@ import {
 } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { AssignShiftModal } from '@/components/employees/AssignShiftModal'
 
 // ───────────────────────────────────────────────────────────────────────────
 // Types
@@ -66,23 +67,27 @@ const getRoleColor = (role?: string) => ROLE_COLORS[role?.toUpperCase() || ''] ?
 // ───────────────────────────────────────────────────────────────────────────
 function ShiftCard({ shift, role }: { shift: TimesheetEntry; role?: string }) {
   const colors = getRoleColor(role)
-  const isOpen = !shift.checkoutAt
+  const isScheduled = !shift.checkinAt && shift.scheduledStartAt
+  const isOpen = !shift.checkoutAt && !isScheduled
 
-  const checkin = parseISO(shift.checkinAt)
-  const duration = shift.checkoutAt 
-    ? differenceInMinutes(parseISO(shift.checkoutAt), checkin)
-    : differenceInMinutes(new Date(), checkin)
+  const start = parseISO((shift.checkinAt || shift.scheduledStartAt) as string)
+  const end = shift.checkoutAt ? parseISO(shift.checkoutAt) : (shift.scheduledEndAt ? parseISO(shift.scheduledEndAt) : null)
+  
+  const duration = end
+    ? differenceInMinutes(end, start)
+    : (isOpen ? differenceInMinutes(new Date(), start) : 0)
+    
   const hours = Math.floor(duration / 60)
   const minutes = duration % 60
 
   return (
     <div className={cn(
       'relative rounded-xl px-3 py-2 border transition-all hover:shadow-lg hover:-translate-y-0.5 cursor-pointer group/shift overflow-hidden',
-      colors.bg,
-      'border-transparent hover:border-white'
+      isScheduled ? 'bg-white border-dashed border-2 border-neutral-200' : colors.bg,
+      !isScheduled && 'border-transparent hover:border-white'
     )}>
       {/* Left accent bar */}
-      <div className={cn('absolute left-0 top-0 bottom-0 w-1 rounded-l-xl', colors.bar)} />
+      <div className={cn('absolute left-0 top-0 bottom-0 w-1 rounded-l-xl', isScheduled ? 'bg-neutral-200' : colors.bar)} />
 
       {/* Live pulse for open shifts */}
       {isOpen && (
@@ -93,17 +98,18 @@ function ShiftCard({ shift, role }: { shift: TimesheetEntry; role?: string }) {
       )}
 
       <div className="pl-2">
-        <div className={cn('text-[10px] font-black tracking-wider', colors.text)}>
-          {format(checkin, 'HH:mm')}
-          {shift.checkoutAt ? (
-            <span className="opacity-60"> → {format(parseISO(shift.checkoutAt), 'HH:mm')}</span>
+        <div className={cn('text-[10px] font-black tracking-wider', isScheduled ? 'text-neutral-400' : colors.text)}>
+          {format(start, 'HH:mm')}
+          {end ? (
+            <span className="opacity-60"> → {format(end, 'HH:mm')}</span>
           ) : (
             <span className="opacity-60"> → ...</span>
           )}
         </div>
-        <div className={cn('text-[9px] font-bold mt-0.5 opacity-60', colors.text)}>
-          {hours}ч {minutes > 0 ? `${minutes}м` : ''}
+        <div className={cn('text-[9px] font-bold mt-0.5 opacity-60', isScheduled ? 'text-neutral-400' : colors.text)}>
+          {duration > 0 && `${hours}ч ${minutes > 0 ? `${minutes}м` : ''}`}
           {isOpen && <span className="ml-1.5 font-black text-emerald-600 opacity-100">● В смене</span>}
+          {isScheduled && <span className="ml-1.5 font-black text-neutral-400 opacity-100">Запланировано</span>}
         </div>
       </div>
     </div>
@@ -136,6 +142,8 @@ export default function TeamSchedulePage() {
   const [filterRole, setFilterRole] = useState('')
   const [viewMode] = useState<ViewMode>('week')
   const [selectedDay, setSelectedDay] = useState<Date>(new Date())
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [selectedEmployeeForShift, setSelectedEmployeeForShift] = useState<string | undefined>()
 
   const weekDays = useMemo(() => eachDayOfInterval({
     start: currentWeekStart,
@@ -253,7 +261,10 @@ export default function TeamSchedulePage() {
           <div className="w-px h-6 bg-neutral-100" />
 
           {/* Add shift button */}
-          <button className="h-10 px-5 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-black/10 active:scale-95">
+          <button 
+            onClick={() => { setSelectedEmployeeForShift(undefined); setIsAssignModalOpen(true); }}
+            className="h-10 px-5 bg-neutral-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg shadow-black/10 active:scale-95"
+          >
             <Plus size={16} />
             Назначить смену
           </button>
@@ -565,7 +576,11 @@ export default function TeamSchedulePage() {
                                 {dayShifts.map(s => (
                                   <ShiftCard key={s.id} shift={s} role={employee.role} />
                                 ))}
-                                {dayShifts.length === 0 && <EmptyCell />}
+                                {dayShifts.length === 0 && <EmptyCell onAdd={() => { 
+                                  setSelectedEmployeeForShift(employee.id); 
+                                  setSelectedDay(day);
+                                  setIsAssignModalOpen(true); 
+                                }} />}
                               </div>
                             </td>
                           )
@@ -652,6 +667,18 @@ export default function TeamSchedulePage() {
         </div>
       </div>
 
+      {isAssignModalOpen && (
+        <AssignShiftModal 
+          onClose={() => setIsAssignModalOpen(false)}
+          onSuccess={() => {
+            setIsAssignModalOpen(false)
+            loadData()
+          }}
+          employees={employees}
+          defaultEmployeeId={selectedEmployeeForShift}
+          defaultDate={format(selectedDay, 'yyyy-MM-dd')}
+        />
+      )}
     </div>
   )
 }

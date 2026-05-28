@@ -111,9 +111,10 @@ export default function PosPage() {
 
   // Stock balances for POS cards
   const { data: stockBalances = [] } = useQuery({
-    queryKey: ['inventory', 'all'],
-    queryFn: inventoryApi.getAllBalances,
+    queryKey: ['inventory', 'all', storeId],
+    queryFn: () => inventoryApi.getAllBalances(storeId),
     refetchInterval: 60_000,
+    staleTime: 10_000,
   });
 
   const getStock = (productId: string) =>
@@ -155,9 +156,10 @@ export default function PosPage() {
         try {
           await inventoryApi.writeOff({
             productId: item.productId,
+            storeId: storeId!,
             quantity: item.quantity,
-            type: 'SALE',
-            reason: `POS SALE #${order.orderNumber || order.id.slice(0,6)} by ${employeeId}`
+            reason: 'SALE',
+            comment: `POS #${order.orderNumber || order.id.slice(0, 6)} by ${employeeId}`,
           });
         } catch (e) {
           console.error('Stock reduction failed for item:', item.productId, e);

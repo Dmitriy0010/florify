@@ -1,9 +1,9 @@
 package ru.florify.employee.adapter.out.persistence.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -30,7 +30,11 @@ public class TimesheetEntryJpaEntity {
     private UUID id;
     private UUID employeeId;
     private LocalDate date;
+    @Column(nullable = true)
     private Instant checkinAt;
+    @Column(nullable = true)
     private Instant checkoutAt;
+    private Instant scheduledStartAt;
+    private Instant scheduledEndAt;
     private BigDecimal hoursWorked;
 }

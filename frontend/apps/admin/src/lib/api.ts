@@ -173,7 +173,10 @@ export interface UpdateEmployeeRequest {
 // TIMESHEET TYPES (соответствие: employee-service TimesheetController)
 // ============================================================
 
-export type TimesheetEntry = components['schemas']['TimesheetEntryResponse'];
+export type TimesheetEntry = components['schemas']['TimesheetEntryResponse'] & {
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+};
 
 // ============================================================
 // SALARY TYPES (соответствие: employee-service SalaryController)
@@ -422,6 +425,8 @@ export const TimesheetService = {
     api.get<TimesheetEntry[]>('/v1/timesheet', { params }),
   checkin: (employeeId: string) => api.post<TimesheetEntry>('/v1/timesheet/checkin', { employeeId }),
   checkout: (employeeId: string) => api.post<TimesheetEntry>('/v1/timesheet/checkout', { employeeId }),
+  schedule: (data: { employeeId: string; date: string; scheduledStartAt: string; scheduledEndAt: string }) => 
+    api.post<TimesheetEntry>('/v1/timesheet/schedule', data),
 };
 
 export const SalaryService = {

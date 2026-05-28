@@ -27,6 +27,8 @@ public class TimesheetEntry {
     private LocalDate date;
     private Instant checkinAt;
     private Instant checkoutAt;
+    private Instant scheduledStartAt;
+    private Instant scheduledEndAt;
     private BigDecimal hoursWorked;
 
     public TimesheetEntry checkout(Instant checkoutInstant) {

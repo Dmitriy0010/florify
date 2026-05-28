@@ -21,9 +21,11 @@ export interface Product {
 
 export interface DeliverySlot {
   id: string
+  date: string
   startTime: string
   endTime: string
-  capacity: number
+  maxCapacity: number
+  currentLoad: number
   remainingCapacity: number
   active: boolean
 }

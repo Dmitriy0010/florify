@@ -14,5 +14,6 @@ public record DeliverySlotResponse(
         LocalTime endTime,
         int maxCapacity,
         int currentLoad,
-        boolean isFull
+        int remainingCapacity,
+        boolean active
 ) {}

@@ -1,7 +1,7 @@
 export type UserRole = 'FLORIST' | 'CASHIER' | 'ADMIN' | 'OWNER' | 'MANAGER' | string;
 
 export type OrderStatus = 'CONFIRMED' | 'IN_PROGRESS' | 'READY' | 'OUT_FOR_DELIVERY' | 'COMPLETED' | string;
-export type WriteOffReason = 'SPOILAGE' | 'DAMAGE' | 'INVENTORY_LOSS';
+export type WriteOffReason = 'SPOILAGE' | 'DAMAGE' | 'INVENTORY_LOSS' | 'SALE';
 
 export interface LoginRequest {
   email: string;
@@ -85,11 +85,11 @@ export interface StockTransaction {
 
 export interface WriteOffPayload {
   productId: string;
+  storeId: string;       // Required by backend (@NotNull)
   quantity: number;
   reason: WriteOffReason;
   comment?: string;
   sourceDocumentId?: string;
-  storeId?: string;
 }
 
 export interface TimesheetEntry {
